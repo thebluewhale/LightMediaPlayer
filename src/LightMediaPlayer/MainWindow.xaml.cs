@@ -7,7 +7,6 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
-using System.Windows.Shell;
 using System.Windows.Threading;
 using LibVLCSharp.Shared;
 using Microsoft.Win32;
@@ -35,6 +34,7 @@ public partial class MainWindow : Window
     private string? _externalSubtitle;
     private WindowState _beforeFullscreen;
     private Rect _normalBounds;
+    private PlayerWindowFrame? _frame;
 
     public MainWindow(string[] arguments)
     {
@@ -43,7 +43,11 @@ public partial class MainWindow : Window
         PlaylistList.ItemsSource = _queue;
         SizeChanged += (_, _) => { if (PlaylistPanel.Visibility == Visibility.Visible) PlaylistColumn.Width = new GridLength(Math.Min(300, Math.Max(220, ActualWidth - 480))); };
         _osdTimer.Tick += (_, _) => { OsdBubble.Visibility = Visibility.Collapsed; _osdTimer.Stop(); };
-        SourceInitialized += (_, _) => _magnet = new WindowMagnet(this, () => !_fullscreen);
+        SourceInitialized += (_, _) =>
+        {
+            _frame = new PlayerWindowFrame(this, TitleBar, TitleButtons, () => _fullscreen);
+            _magnet = new WindowMagnet(this, () => !_fullscreen);
+        };
         Activated += (_, _) => { if (!_arguments.Contains("--self-test-report")) RefreshSeekPreferences(); };
         VideoOverlay.Loaded += (_, _) =>
         {
@@ -81,7 +85,12 @@ public partial class MainWindow : Window
             _timer.Start();
             SetStatus("준비됨 · 파일을 열거나 끌어 놓으세요");
             AppLog.Write("READY " + Environment.ProcessId);
-            if (_arguments.Contains("--self-test-report")) { await RunSelfTestAsync(); return; }
+            if (_arguments.Contains("--self-test-report"))
+            {
+                if (_arguments.Contains("--resize-only")) await RunResizeTestAsync();
+                else await RunSelfTestAsync();
+                return;
+            }
             var input = _arguments.FirstOrDefault(a => !a.StartsWith("--", StringComparison.Ordinal));
             if (input != null) await OpenPathAsync(input);
         }
@@ -481,7 +490,6 @@ public partial class MainWindow : Window
             _beforeFullscreen = WindowState;
             _fullscreen = true;
             WindowState = WindowState.Normal;
-            WindowChrome.SetWindowChrome(this, null);
             ResizeMode = ResizeMode.NoResize;
             TitleBar.Visibility = Visibility.Collapsed;
             WindowState = WindowState.Maximized;
@@ -491,7 +499,6 @@ public partial class MainWindow : Window
             _fullscreen = false;
             WindowState = WindowState.Normal;
             ResizeMode = ResizeMode.CanResize;
-            WindowChrome.SetWindowChrome(this, new WindowChrome { CaptionHeight = 44, ResizeBorderThickness = new Thickness(6), GlassFrameThickness = new Thickness(0), CornerRadius = new CornerRadius(0), UseAeroCaptionButtons = false });
             TitleBar.Visibility = Visibility.Visible;
             Left = _normalBounds.Left; Top = _normalBounds.Top; Width = _normalBounds.Width; Height = _normalBounds.Height;
             WindowState = _beforeFullscreen;
@@ -547,6 +554,7 @@ public partial class MainWindow : Window
         _timer.Stop();
         _osdTimer.Stop();
         _magnet?.Dispose();
+        _frame?.Dispose();
         CancelSorting();
         ++_generation;
         var bounds = _fullscreen ? _normalBounds : WindowState == WindowState.Normal ? new Rect(Left, Top, Width, Height) : RestoreBounds;

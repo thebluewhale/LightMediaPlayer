@@ -1,0 +1,155 @@
+using System.IO;
+using System.Runtime.InteropServices;
+using System.Text.Json;
+using System.Windows;
+using System.Windows.Interop;
+
+namespace LightMediaPlayer;
+
+public partial class MainWindow
+{
+    // Opt-in probe of this test instance's HWND only. No desktop capture/input.
+    private async Task RunResizeTestAsync()
+    {
+        var index = Array.IndexOf(_arguments, "--self-test-report");
+        var report = _arguments[index + 1];
+        var checks = new List<object>();
+        var passed = true;
+        void Check(string name, bool ok, object? details = null)
+        { checks.Add(new { name, passed = ok, details }); passed &= ok; AppLog.Write($"CHECK {name}: {ok}"); }
+        var hwnd = new WindowInteropHelper(this).Handle;
+        var source = HwndSource.FromHwnd(hwnd);
+        var hiddenTransitions = 0;
+        nint Observe(nint handle, int message, nint wParam, nint lParam, ref bool handled)
+        {
+            if (message == 0x007D && wParam == -16 && lParam != 0)
+            {
+                var styles = Marshal.PtrToStructure<ResizeProbeNative.StyleChange>(lParam);
+                if ((styles.Old & 0x10000000) != 0 && (styles.New & 0x10000000) == 0) hiddenTransitions++;
+            }
+            return 0;
+        }
+        source.AddHook(Observe);
+        try
+        {
+            await OpenPathAsync(_arguments[index + 2]);
+            for (var attempt = 0; attempt < 100 && _player?.IsPlaying != true; attempt++) await Task.Delay(100);
+            Check("resize_playback_started", _player?.IsPlaying == true);
+            WindowState = WindowState.Normal;
+            await Task.Delay(200);
+            ResizeProbeNative.GetWindowRect(hwnd, out var original);
+            var player = _player;
+            var generation = _generation;
+            var frames = _media?.Statistics.DisplayedPictures ?? 0;
+            var region = ResizeProbeNative.CreateRectRgn(0, 0, 0, 0);
+            var regionFree = true;
+            hiddenTransitions = 0;
+            // Enter/exit the native move/size rendering mode, varying all four edges.
+            ResizeProbeNative.SendMessage(hwnd, 0x0231, 0, 0);
+            try
+            {
+                for (var i = 0; i < 40; i++)
+                {
+                    var amount = (i % 10) * 8;
+                    ResizeProbeNative.SetWindowPos(hwnd, 0, original.Left + amount, original.Top + amount / 2,
+                        original.Right - original.Left + (i % 2 == 0 ? amount : -amount),
+                        original.Bottom - original.Top + (i % 2 == 0 ? amount : -amount), 0x0014);
+                    regionFree &= ResizeProbeNative.GetWindowRgn(hwnd, region) == 0;
+                    await Task.Delay(25);
+                }
+            }
+            finally
+            {
+                ResizeProbeNative.DeleteObject(region);
+                ResizeProbeNative.SendMessage(hwnd, 0x0232, 0, 0);
+                ResizeProbeNative.SetWindowPos(hwnd, 0, original.Left, original.Top, original.Right - original.Left, original.Bottom - original.Top, 0x0014);
+            }
+            Check("resize_never_hides_window", hiddenTransitions == 0, hiddenTransitions);
+            Check("resize_has_no_changing_clip_region", regionFree);
+            Check("resize_keeps_player", ReferenceEquals(player, _player) && _generation == generation && _player?.IsPlaying == true);
+            await Task.Delay(700);
+            Check("resize_keeps_video_frames", (_media?.Statistics.DisplayedPictures ?? 0) > frames);
+            hiddenTransitions = 0;
+            var title = Title;
+            for (var i = 0; i < 10; i++) Title = title + " " + i;
+            Title = title;
+            Check("title_update_never_hides_window", hiddenTransitions == 0, hiddenTransitions);
+            int HitAt(int x, int y) => (int)ResizeProbeNative.SendMessage(hwnd, 0x0084, 0, (nint)((y << 16) | (x & 0xffff)));
+            var midX = (original.Left + original.Right) / 2;
+            var midY = (original.Top + original.Bottom) / 2;
+            Check("native_eight_resize_edges", new[]
+            {
+                HitAt(original.Left + 1, midY), HitAt(original.Right - 1, midY),
+                HitAt(midX, original.Top + 1), HitAt(midX, original.Bottom - 1),
+                HitAt(original.Left + 1, original.Top + 1), HitAt(original.Right - 1, original.Top + 1),
+                HitAt(original.Left + 1, original.Bottom - 1), HitAt(original.Right - 1, original.Bottom - 1)
+            }.SequenceEqual(new[] { 10, 11, 12, 15, 13, 14, 16, 17 }));
+            var captionPoint = TitleBar.PointToScreen(new Point(80, 22));
+            var buttonPoint = MaximizeButton.PointToScreen(new Point(20, 20));
+            Check("native_caption_and_buttons", HitAt((int)captionPoint.X, (int)captionPoint.Y) == 2 && HitAt((int)buttonPoint.X, (int)buttonPoint.Y) == 1);
+            var minMaxPointer = Marshal.AllocHGlobal(Marshal.SizeOf<PlayerWindowFrame.MinMaxInfo>());
+            try
+            {
+                Marshal.StructureToPtr(new PlayerWindowFrame.MinMaxInfo(), minMaxPointer, false);
+                ResizeProbeNative.SendMessage(hwnd, 0x0024, 0, minMaxPointer);
+                var minMax = Marshal.PtrToStructure<PlayerWindowFrame.MinMaxInfo>(minMaxPointer);
+                var dpi = PlayerWindowFrame.GetDpiForWindow(hwnd) / 96.0;
+                Check("native_minimum_size_uses_dpi", minMax.MinTrackSize.X == (int)Math.Ceiling(MinWidth * dpi) && minMax.MinTrackSize.Y == (int)Math.Ceiling(MinHeight * dpi));
+            }
+            finally { Marshal.FreeHGlobal(minMaxPointer); }
+            WindowState = WindowState.Maximized;
+            await Task.Delay(150);
+            Check("resize_maximize", WindowState == WindowState.Maximized && ResizeProbeNative.IsWindowVisible(hwnd));
+            var monitor = new PlayerWindowFrame.MonitorInfo { Size = Marshal.SizeOf<PlayerWindowFrame.MonitorInfo>() };
+            PlayerWindowFrame.GetMonitorInfo(PlayerWindowFrame.MonitorFromWindow(hwnd, 2), ref monitor);
+            ResizeProbeNative.GetWindowRect(hwnd, out var maximized);
+            Check("maximize_respects_work_area", maximized.Left == monitor.Work.Left && maximized.Top == monitor.Work.Top && maximized.Right == monitor.Work.Right && maximized.Bottom == monitor.Work.Bottom, maximized);
+            WindowState = WindowState.Minimized;
+            await Task.Delay(150);
+            Check("resize_minimize", ResizeProbeNative.IsIconic(hwnd));
+            WindowState = WindowState.Normal;
+            await Task.Delay(150);
+            Check("resize_restore", !ResizeProbeNative.IsIconic(hwnd) && ResizeProbeNative.IsWindowVisible(hwnd));
+            // Restoring a minimized maximized HWND restores its maximized state.
+            // Explicitly return to normal before testing resizable fullscreen restore.
+            WindowState = WindowState.Normal;
+            await Task.Delay(150);
+            ResizeProbeNative.GetWindowRect(hwnd, out var beforeFullscreen);
+            ToggleFullscreen();
+            await Task.Delay(150);
+            ResizeProbeNative.GetWindowRect(hwnd, out var fullscreen);
+            Check("fullscreen_fills_monitor", fullscreen.Left == monitor.Monitor.Left && fullscreen.Top == monitor.Monitor.Top && fullscreen.Right == monitor.Monitor.Right && fullscreen.Bottom == monitor.Monitor.Bottom, fullscreen);
+            Check("fullscreen_disables_resize", HitAt(fullscreen.Left + 1, fullscreen.Top + 1) == 1);
+            ToggleFullscreen();
+            await Task.Delay(150);
+            ResizeProbeNative.GetWindowRect(hwnd, out var restored);
+            Check("fullscreen_restores_resizing", HitAt(restored.Left + 1, restored.Top + 1) == 13,
+                new { state = WindowState.ToString(), resizeMode = ResizeMode.ToString() });
+            Check("fullscreen_restores_bounds", restored.Left == beforeFullscreen.Left && restored.Top == beforeFullscreen.Top && restored.Right == beforeFullscreen.Right && restored.Bottom == beforeFullscreen.Bottom,
+                new { before = new { beforeFullscreen.Left, beforeFullscreen.Top, beforeFullscreen.Right, beforeFullscreen.Bottom }, after = new { restored.Left, restored.Top, restored.Right, restored.Bottom } });
+            Hide();
+            Check("intentional_hide_still_works", !ResizeProbeNative.IsWindowVisible(hwnd));
+            Show();
+            Check("intentional_show_still_works", ResizeProbeNative.IsWindowVisible(hwnd));
+        }
+        catch (Exception ex) { Check("exception", false, ex.ToString()); }
+        finally { source.RemoveHook(Observe); }
+        Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(report))!);
+        await File.WriteAllTextAsync(report, JsonSerializer.Serialize(new { processId = Environment.ProcessId, passed, checks }, new JsonSerializerOptions { WriteIndented = true }));
+        Close();
+    }
+}
+
+internal static class ResizeProbeNative
+{
+    [StructLayout(LayoutKind.Sequential)] internal struct StyleChange { public uint Old, New; }
+    [StructLayout(LayoutKind.Sequential)] internal struct Rect { public int Left, Top, Right, Bottom; }
+    [DllImport("user32.dll")] internal static extern bool GetWindowRect(nint hwnd, out Rect rect);
+    [DllImport("user32.dll")] internal static extern bool SetWindowPos(nint hwnd, nint after, int x, int y, int width, int height, uint flags);
+    [DllImport("user32.dll", EntryPoint = "SendMessageW")] internal static extern nint SendMessage(nint hwnd, uint message, nint wParam, nint lParam);
+    [DllImport("user32.dll")] internal static extern bool IsWindowVisible(nint hwnd);
+    [DllImport("user32.dll")] internal static extern bool IsIconic(nint hwnd);
+    [DllImport("user32.dll")] internal static extern int GetWindowRgn(nint hwnd, nint region);
+    [DllImport("gdi32.dll")] internal static extern nint CreateRectRgn(int left, int top, int right, int bottom);
+    [DllImport("gdi32.dll")] internal static extern bool DeleteObject(nint value);
+}

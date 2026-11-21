@@ -29,6 +29,18 @@ public partial class MainWindow
             while (Environment.TickCount64 - start < timeout) { if (predicate()) return true; await Task.Delay(100); }
             return predicate();
         }
+        async Task<bool> UntilStable(Func<bool> predicate, int timeout = 15000)
+        {
+            // LibVLC track getters may briefly report a requested track before
+            // the decoder has finished switching. Require a sustained result.
+            long? since = null;
+            return await Until(() =>
+            {
+                if (!predicate()) { since = null; return false; }
+                since ??= Environment.TickCount64;
+                return Environment.TickCount64 - since.Value >= 200;
+            }, timeout);
+        }
         try
         {
             await OpenPathAsync(file);
@@ -65,17 +77,18 @@ public partial class MainWindow
             var tracks = _player.AudioTrackDescription.Where(t => t.Id >= 0).ToArray();
             if (tracks.Length >= 2) { _player.SetAudioTrack(tracks[1].Id); Check("audio_track_selection", await Until(() => _player!.AudioTrack == tracks[1].Id)); }
             else Check("audio_track_selection", false);
-            await RunSoundMenuTestsAsync(Check, Until);
+            await RunSoundMenuTestsAsync(Check, UntilStable);
             var sub = Path.ChangeExtension(file, ".srt");
             if (File.Exists(sub)) await LoadSubtitleAsync(sub);
-            Check("subtitle_load", await Until(() => _player!.SpuDescription.Any(t => t.Id >= 0)));
+            Check("subtitle_load", await UntilStable(() => _player!.SpuDescription.Any(t => t.Id >= 0)));
             var subId = _player.SpuDescription.FirstOrDefault(t => t.Id >= 0).Id;
             _player.SetSpu(subId);
+            await UntilStable(() => _player.Spu == subId);
             ToggleSubtitles();
-            Check("subtitle_hide", _player.Spu == -1);
+            Check("subtitle_hide", await UntilStable(() => _player.Spu == -1));
             ToggleSubtitles();
-            Check("subtitle_show", await Until(() => _player!.Spu >= 0));
-            await RunSubtitleMenuTestsAsync(Check, Until);
+            Check("subtitle_show", await UntilStable(() => _player!.Spu >= 0));
+            await RunSubtitleMenuTestsAsync(Check, UntilStable);
             var before = new Size(Width, Height);
             ToggleFullscreen();
             await Task.Delay(300);

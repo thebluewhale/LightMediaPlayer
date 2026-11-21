@@ -1,0 +1,117 @@
+{
+  "processId": 28464,
+  "passed": true,
+  "checks": [
+    {
+      "name": "resize_playback_started",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "resize_never_hides_window",
+      "passed": true,
+      "details": 0
+    },
+    {
+      "name": "resize_has_no_changing_clip_region",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "resize_keeps_player",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "resize_keeps_video_frames",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "title_update_never_hides_window",
+      "passed": true,
+      "details": 0
+    },
+    {
+      "name": "native_eight_resize_edges",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "native_caption_and_buttons",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "native_minimum_size_uses_dpi",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "resize_maximize",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "maximize_respects_work_area",
+      "passed": true,
+      "details": {}
+    },
+    {
+      "name": "resize_minimize",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "resize_restore",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "fullscreen_fills_monitor",
+      "passed": true,
+      "details": {}
+    },
+    {
+      "name": "fullscreen_disables_resize",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "fullscreen_restores_resizing",
+      "passed": true,
+      "details": {
+        "state": "Normal",
+        "resizeMode": "CanResize"
+      }
+    },
+    {
+      "name": "fullscreen_restores_bounds",
+      "passed": true,
+      "details": {
+        "before": {
+          "Left": 0,
+          "Top": 0,
+          "Right": 2062,
+          "Bottom": 1392
+        },
+        "after": {
+          "Left": 0,
+          "Top": 0,
+          "Right": 2062,
+          "Bottom": 1392
+        }
+      }
+    },
+    {
+      "name": "intentional_hide_still_works",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "intentional_show_still_works",
+      "passed": true,
+      "details": null
+    }
+  ]
+}

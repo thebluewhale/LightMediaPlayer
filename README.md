@@ -6,7 +6,7 @@ Windows x64용 동영상·음악 플레이어 POC. C# / WPF / .NET 10 / LibVLCSh
 
 [GitHub Releases](https://github.com/thebluewhale/LightMediaPlayer/releases)에서 받습니다.
 
-- `LightMediaPlayer-Portable-0.3.2.exe`: 설치 없이 실행하는 단일 EXE. .NET이나 VLC를 따로 설치할 필요가 없습니다.
+- `LightMediaPlayer-Portable-0.3.3.exe`: 설치 없이 실행하는 단일 EXE. .NET이나 VLC를 따로 설치할 필요가 없습니다.
 - `LightMediaPlayer-Setup.exe`: 현재 사용자용 설치 프로그램. 관리자 권한 없이 설치하고 제거할 수 있습니다.
 - `SHA256SUMS.txt`: 배포 파일의 SHA-256 체크섬.
 
@@ -17,6 +17,7 @@ Windows x64용 동영상·음악 플레이어 POC. C# / WPF / .NET 10 / LibVLCSh
 ## 구현된 기능
 
 - 상단 제목 표시줄, 최소화·최대화·종료, 창 크기 조절.
+- 창 테두리는 불투명한 Win32 클라이언트 영역과 네이티브 크기 조절을 사용합니다. 크기 변경 때 창 표시 영역을 다시 지정하거나 제목 갱신 때 창을 잠시 숨기는 WPF WindowChrome 경로를 사용하지 않습니다.
 - 영상 표시, 원본 화면 비율 유지, 오디오 전용 파일 표시.
 - 재생·일시정지·정지와 상태에 따른 재생 버튼 전환. 정지 후 재생은 처음부터 시작.
 - 진행 바 클릭·드래그, 시간 표시, 키보드 구간 탐색.
@@ -113,6 +114,7 @@ FFmpeg Windows 빌드를 `.tools/ffmpeg` 아래에 준비합니다. FFmpeg는 �
 ```powershell
 ./scripts/create-fixtures.ps1
 ./scripts/test.ps1
+./scripts/test-resize.ps1
 ```
 
 생성한 MP4·MKV를 두 프로세스로 동시에 실행하여 실제 LibVLC 재생·탐색·자막·트랙·오류·동시 재생과 설정·재생목록을 검증합니다. 결과 JSON은 `artifacts/test-results/v<버전>`에 생성됩니다. 테스트는 사용자의 설정 파일을 덮어쓰지 않습니다.
@@ -125,6 +127,7 @@ FFmpeg Windows 빌드를 `.tools/ffmpeg` 아래에 준비합니다. FFmpeg는 �
 - `MainWindow.ContextMenu.cs`, `DelayedSubmenuItem.cs`: 영상 우클릭 메뉴, 클릭·1초 hover로 하위 메뉴 열기.
 - `MainWindow.Playlist.cs`, `PlaylistEntry.cs`: 목록 편집, 현재 항목 식별, 비동기 정렬.
 - `WindowMagnet.cs`: WM_MOVING 기반 모니터 작업 영역 자석 정렬.
+- `PlayerWindowFrame.cs`: 네이티브 테두리 hit test, 제목줄 드래그, DPI별 최소 크기, 작업 영역/전체화면 크기 처리.
 - `MediaFiles.cs`, `PlaylistFiles.cs`: 형식 분류, 파일명 비교, 로컬 목록 읽기.
 - `PlayerSettings.cs`: 설정 로드·원자적 저장·손상 복구.
 - `NativeRuntime.cs`: 단일 EXE의 엔진 추출. 추출 시에만 잠금을 사용하므로 다중 프로세스 재생을 제한하지 않습니다.

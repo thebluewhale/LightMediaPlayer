@@ -60,8 +60,14 @@ public partial class MainWindow
         var selectedIndex = Array.FindLastIndex(descriptions, track => track.Id >= 0);
         ((MenuItem)tracks.Items[selectedIndex]).RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));
         Check("sound_menu_select_track", await until(() => _player.AudioTrack == descriptions[selectedIndex].Id, 3000));
-        var refreshedTracks = (MenuItem)((MenuItem)BuildVideoMenu().Items[3]).Items[3];
-        Check("sound_menu_selected_track_checked", ((MenuItem)refreshedTracks.Items[selectedIndex]).IsChecked);
+        Check("sound_menu_selected_track_checked", await until(() =>
+        {
+            // Track changes are asynchronous; re-open as the UI does and wait for
+            // the selected track to settle instead of trusting the old list index.
+            var refreshedTracks = (MenuItem)((MenuItem)BuildVideoMenu().Items[3]).Items[3];
+            return _player.AudioTrack == descriptions[selectedIndex].Id && refreshedTracks.Items.Cast<MenuItem>()
+                .Any(item => item.IsChecked && Equals(item.Header, descriptions[selectedIndex].Name));
+        }, 3000));
         menu.IsOpen = false;
         Check("sound_menu_close_resets_nested", await until(() => !sound.IsSubmenuOpen && !tracks.IsSubmenuOpen, 2000));
     }

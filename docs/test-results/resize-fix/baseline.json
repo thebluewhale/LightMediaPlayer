@@ -1,0 +1,56 @@
+{
+  "processId": 13752,
+  "passed": false,
+  "checks": [
+    {
+      "name": "resize_playback_started",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "resize_never_hides_window",
+      "passed": true,
+      "details": 0
+    },
+    {
+      "name": "resize_keeps_player",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "resize_keeps_video_frames",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "title_update_never_hides_window",
+      "passed": false,
+      "details": 11
+    },
+    {
+      "name": "resize_maximize",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "resize_minimize",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "resize_restore",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "intentional_hide_still_works",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "intentional_show_still_works",
+      "passed": true,
+      "details": null
+    }
+  ]
+}
