@@ -31,6 +31,11 @@ public partial class MainWindow
         try
         {
             await OpenPathAsync(file);
+            Check("initial_playlist_contains_only_opened_file", _queue.Count == 1 && _queue[0].Path == Path.GetFullPath(file));
+            var initialGeneration = _generation;
+            await MoveFileAsync(1);
+            await MoveFileAsync(-1);
+            Check("single_item_navigation_does_not_discover_siblings", _generation == initialGeneration && _queue.Count == 1 && !PreviousButton.IsEnabled && !NextButton.IsEnabled);
             Check("native_playback_started", await Until(() => _player?.IsPlaying == true && _player.Time > 700), _path);
             Check("video_and_audio_tracks", _player!.VideoTrackCount > 0 && _player.AudioTrackCount >= 2, new { video = _player.VideoTrackCount, audio = _player.AudioTrackCount });
             Check("duration_and_seek", _player.Length > 15000 && _player.IsSeekable, _player.Length);
@@ -99,8 +104,10 @@ public partial class MainWindow
             var dir = Path.GetDirectoryName(file)!;
             await OpenPathAsync(Path.Combine(dir, "영상2.mkv"));
             await Until(() => _player?.IsPlaying == true);
+            AddPlaylistFiles([Path.Combine(dir, "영상10.mp4")]);
+            Check("explicit_add_preserves_current_and_appends", _queue.Count == 2 && _queue[0].Path == _path && Path.GetFileName(_queue[1].Path) == "영상10.mp4");
             await MoveFileAsync(1);
-            Check("next_file_natural_order", Path.GetFileName(_path) == "영상10.mp4" && await Until(() => _player?.IsPlaying == true));
+            Check("next_file_from_explicit_playlist", Path.GetFileName(_path) == "영상10.mp4" && await Until(() => _player?.IsPlaying == true));
             await MoveFileAsync(-1);
             Check("previous_file", Path.GetFileName(_path) == "영상2.mkv" && await Until(() => _player?.IsPlaying == true));
             await OpenPathAsync(Path.Combine(dir, "음악.flac"));

@@ -13,15 +13,6 @@ internal static class MediaFiles
     public static readonly IComparer<string> NaturalComparer = Comparer<string>.Create(NaturalCompare);
     public static string OpenFilter => "미디어 파일|" + string.Join(';', RequestedExtensions.Split(' ').Distinct().Select(x => "*." + x)) + ";*.xspf|모든 파일|*.*";
     public static string SubtitleFilter => "자막 파일|" + string.Join(';', Subtitles.Select(x => "*" + x)) + "|모든 파일|*.*";
-    public static string[] Neighbors(string path)
-    {
-        try
-        {
-            return Directory.EnumerateFiles(Path.GetDirectoryName(path)!).Where(f => Playable.Contains(Path.GetExtension(f)))
-                .Append(path).Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(f => Path.GetFileName(f), Comparer<string>.Create(NaturalCompare)).ToArray();
-        }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { return [path]; }
-    }
     public static string? FindSubtitle(string path)
     {
         var stem = Path.Combine(Path.GetDirectoryName(path)!, Path.GetFileNameWithoutExtension(path));

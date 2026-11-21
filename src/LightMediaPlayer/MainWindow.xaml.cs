@@ -154,8 +154,10 @@ public partial class MainWindow : Window
             entry ??= retainSubtitle && _currentEntry?.Path == path ? _currentEntry : _queue.FirstOrDefault(e => string.Equals(e.Path, path, StringComparison.OrdinalIgnoreCase));
             if (entry == null)
             {
-                ReplaceQueue(await Task.Run(() => MediaFiles.Neighbors(path)));
-                entry = _queue.First(e => string.Equals(e.Path, path, StringComparison.OrdinalIgnoreCase));
+                // Opening a media file never discovers or queues its siblings.
+                // Additional entries come only from an explicit user selection/import.
+                ReplaceQueue([path]);
+                entry = _queue[0];
             }
             _currentEntry = entry;
             RefreshQueue();
