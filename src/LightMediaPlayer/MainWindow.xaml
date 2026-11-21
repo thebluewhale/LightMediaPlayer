@@ -37,18 +37,18 @@
    <StackPanel Orientation="Horizontal">
     <Button x:Name="PlayButton" Content="&#xE768;" FontFamily="Segoe MDL2 Assets" FontSize="20" Background="#27433F" Foreground="{StaticResource Accent}" Width="48" Click="Play_Click" ToolTip="재생 (Space)" AutomationProperties.Name="재생"/>
     <Button x:Name="StopButton" Content="&#xE71A;" FontFamily="Segoe MDL2 Assets" FontSize="15" Width="43" Click="Stop_Click" ToolTip="정지 (S)" AutomationProperties.Name="정지"/>
-    <Button x:Name="PreviousButton" Content="&#xE892;" FontFamily="Segoe MDL2 Assets" FontSize="17" Width="40" Click="Previous_Click" ToolTip="이전 파일 (Page Up)" AutomationProperties.Name="이전 파일"/>
-    <Button x:Name="NextButton" Content="&#xE893;" FontFamily="Segoe MDL2 Assets" FontSize="17" Width="40" Click="Next_Click" ToolTip="다음 파일 (Page Down)" AutomationProperties.Name="다음 파일"/>
+    <Button x:Name="PreviousButton" Style="{StaticResource IconButton}" Content="&#xE892;" FontFamily="Segoe MDL2 Assets" FontSize="17" Width="40" Click="Previous_Click" ToolTip="이전 파일 (Page Up)" AutomationProperties.Name="이전 파일"/>
+    <Button x:Name="NextButton" Style="{StaticResource IconButton}" Content="&#xE893;" FontFamily="Segoe MDL2 Assets" FontSize="17" Width="40" Click="Next_Click" ToolTip="다음 파일 (Page Down)" AutomationProperties.Name="다음 파일"/>
    </StackPanel>
    <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="17,0,12,0"><TextBlock x:Name="FileText" Text="재생할 파일을 선택하세요" FontSize="12" TextTrimming="CharacterEllipsis"/><TextBlock x:Name="StatusText" Text="준비 중" Foreground="#8B9AA9" FontSize="10" Margin="0,3,0,0" TextTrimming="CharacterEllipsis"/></StackPanel>
-   <StackPanel Grid.Column="2" Orientation="Horizontal">
-    <Button Content="&#xE8E5;" FontFamily="Segoe MDL2 Assets" FontSize="17" Width="38" Click="Open_Click" ToolTip="파일 열기 (Ctrl+O)" AutomationProperties.Name="파일 열기"/>
-    <Button x:Name="TracksButton" Content="&#xE712;" FontFamily="Segoe MDL2 Assets" FontSize="17" Width="38" Click="Tracks_Click" ToolTip="자막 · 트랙 · 재생 메뉴" AutomationProperties.Name="트랙 메뉴"/>
-    <Button Content="&#xE713;" FontFamily="Segoe MDL2 Assets" FontSize="17" Width="38" Click="Settings_Click" ToolTip="설정" AutomationProperties.Name="설정"/>
-    <Button x:Name="PlaylistToggle" Content="&#xE8F1;" FontFamily="Segoe MDL2 Assets" FontSize="17" Width="38" Click="PlaylistToggle_Click" ToolTip="재생목록 표시 / 숨김" AutomationProperties.Name="재생목록"/>
+   <StackPanel x:Name="RightControls" Grid.Column="2" Orientation="Horizontal">
+    <Button Style="{StaticResource IconButton}" Content="&#xE8E5;" FontFamily="Segoe MDL2 Assets" FontSize="17" Width="38" Click="Open_Click" ToolTip="파일 열기 (Ctrl+O)" AutomationProperties.Name="파일 열기"/>
+    <Button x:Name="TracksButton" Style="{StaticResource IconButton}" Content="&#xE712;" FontFamily="Segoe MDL2 Assets" FontSize="17" Width="38" Click="Tracks_Click" ToolTip="자막 · 트랙 · 재생 메뉴" AutomationProperties.Name="트랙 메뉴"/>
+    <Button x:Name="SettingsButton" Style="{StaticResource IconButton}" Content="&#xE713;" FontFamily="Segoe MDL2 Assets" FontSize="17" Width="38" Click="Settings_Click" ToolTip="설정" AutomationProperties.Name="설정"/>
+    <Button x:Name="PlaylistToggle" Style="{StaticResource IconButton}" Content="&#xE8F1;" FontFamily="Segoe MDL2 Assets" FontSize="17" Width="38" Click="PlaylistToggle_Click" ToolTip="재생목록 표시 / 숨김" AutomationProperties.Name="재생목록"/>
    </StackPanel>
   </Grid>
-  <Border x:Name="PlaylistPanel" Grid.Column="1" Grid.Row="1" Grid.RowSpan="3" Visibility="Collapsed" Background="#181F27" BorderBrush="#313A44" BorderThickness="1,0,0,0" Padding="12">
+  <Border x:Name="PlaylistPanel" Grid.Column="1" Grid.Row="1" Grid.RowSpan="3" Visibility="Collapsed" Background="#181F27" BorderBrush="#313A44" BorderThickness="1,0,0,0" Padding="12" AllowDrop="True" PreviewDragOver="Playlist_DragOver" PreviewDrop="Playlist_Drop">
    <Grid><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
     <TextBlock Text="재생목록" Foreground="#DFE8F2" FontSize="14" FontWeight="SemiBold" Margin="4,5,0,16"/>
     <ListBox x:Name="PlaylistList" Grid.Row="1" Background="Transparent" BorderThickness="0" Foreground="#BBC8D6" SelectionMode="Single" ScrollViewer.HorizontalScrollBarVisibility="Disabled" MouseDoubleClick="Playlist_DoubleClick" SelectionChanged="Playlist_SelectionChanged" AutomationProperties.Name="재생목록 파일">

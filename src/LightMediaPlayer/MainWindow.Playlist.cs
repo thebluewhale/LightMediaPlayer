@@ -92,6 +92,22 @@ public partial class MainWindow
         var dialog = new OpenFileDialog { Title = "재생목록에 추가", Filter = MediaFiles.OpenFilter, Multiselect = true, CheckFileExists = true };
         if (dialog.ShowDialog(this) == true) AddPlaylistFiles(dialog.FileNames);
     }
+    private void Playlist_DragOver(object sender, DragEventArgs e)
+    {
+        e.Effects = e.Data.GetDataPresent(DataFormats.FileDrop) ? DragDropEffects.Copy : DragDropEffects.None;
+        e.Handled = true;
+    }
+    private void Playlist_Drop(object sender, DragEventArgs e)
+    {
+        // Consume the tunneled event before it can reach the window's open/play
+        // handler, including drops on a list row, empty space, or footer button.
+        e.Handled = true;
+        AppendPlaylistDrop(e.Data);
+    }
+    private void AppendPlaylistDrop(IDataObject data)
+    {
+        if (data.GetData(DataFormats.FileDrop) is string[] paths) AddPlaylistFiles(paths);
+    }
     private void AddPlaylistFiles(IEnumerable<string> paths)
     {
         CancelSorting();

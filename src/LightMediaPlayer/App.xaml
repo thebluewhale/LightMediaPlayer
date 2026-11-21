@@ -10,6 +10,9 @@
         <ControlTemplate.Triggers><Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Surface" Property="Background" Value="#303943"/></Trigger><Trigger Property="IsPressed" Value="True"><Setter TargetName="Surface" Property="Background" Value="#42505B"/></Trigger><Trigger Property="IsEnabled" Value="False"><Setter Property="Opacity" Value="0.35"/></Trigger></ControlTemplate.Triggers>
       </ControlTemplate></Setter.Value></Setter>
     </Style>
+    <Style x:Key="IconButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+      <Setter Property="Padding" Value="6"/>
+    </Style>
     <Style TargetType="Slider">
       <Setter Property="Foreground" Value="{StaticResource Accent}"/><Setter Property="VerticalAlignment" Value="Center"/>
       <Setter Property="Focusable" Value="False"/>

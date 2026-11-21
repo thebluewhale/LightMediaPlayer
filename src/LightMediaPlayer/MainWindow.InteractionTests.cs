@@ -120,15 +120,16 @@ public partial class MainWindow
         AddPlaylistFiles([small]);
         await MoveFileAsync(1);
         Check("play_from_empty_then_added_queue", _path == small && _queue.Count == 1);
+        await RunDropAndMenuTestsAsync(large, small, visualDir, check, until);
     }
 
     // Render only controls owned by this test instance, not the desktop or any user window.
-    private static void RenderControl(FrameworkElement element, string path, double width, double height)
+    private static void RenderControl(FrameworkElement element, string path, double width, double height, double scale = 1)
     {
         element.Measure(new Size(width, height));
         element.Arrange(new Rect(0, 0, width, height));
         element.UpdateLayout();
-        var bitmap = new RenderTargetBitmap((int)width, (int)height, 96, 96, PixelFormats.Pbgra32);
+        var bitmap = new RenderTargetBitmap((int)Math.Ceiling(width * scale), (int)Math.Ceiling(height * scale), 96 * scale, 96 * scale, PixelFormats.Pbgra32);
         bitmap.Render(element);
         var encoder = new PngBitmapEncoder();
         encoder.Frames.Add(BitmapFrame.Create(bitmap));

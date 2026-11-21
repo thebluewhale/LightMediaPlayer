@@ -37,7 +37,8 @@ public partial class MainWindow
         _settings.CtrlSeekSeconds = saved.CtrlSeekSeconds;
         _settings.ShiftSeekSeconds = saved.ShiftSeekSeconds;
     }
-    private void Settings_Click(object sender, RoutedEventArgs e)
+    private void Settings_Click(object sender, RoutedEventArgs e) => OpenSettings();
+    private void OpenSettings()
     {
         RefreshSeekPreferences();
         var dialog = new SettingsWindow(_settings, (plain, ctrl, shift) =>

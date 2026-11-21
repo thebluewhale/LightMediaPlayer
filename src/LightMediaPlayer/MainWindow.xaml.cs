@@ -531,7 +531,7 @@ public partial class MainWindow : Window
     private void Window_DragOver(object sender, DragEventArgs e) { e.Effects = e.Data.GetDataPresent(DataFormats.FileDrop) ? DragDropEffects.Copy : DragDropEffects.None; e.Handled = true; }
     private async void Window_Drop(object sender, DragEventArgs e) { e.Handled = true; if (e.Data.GetData(DataFormats.FileDrop) is string[] files) await OpenFilesAsync(files); }
     private void Video_MouseLeftButtonDown(object sender, MouseButtonEventArgs e) { Focus(); if (e.ClickCount == 2) { ToggleFullscreen(); e.Handled = true; } }
-    private void Video_MouseRightButtonUp(object sender, MouseButtonEventArgs e) { var menu = BuildMenu(); menu.PlacementTarget = VideoOverlay; menu.IsOpen = true; e.Handled = true; }
+    private void Video_MouseRightButtonUp(object sender, MouseButtonEventArgs e) { var menu = BuildVideoMenu(); menu.PlacementTarget = VideoOverlay; menu.IsOpen = true; e.Handled = true; }
     private void Tracks_Click(object sender, RoutedEventArgs e) { var menu = BuildMenu(); menu.PlacementTarget = TracksButton; menu.IsOpen = true; }
     private async void Play_Click(object sender, RoutedEventArgs e) => await TogglePlaybackAsync();
     private async void Stop_Click(object sender, RoutedEventArgs e) => await StopPlaybackAsync();
