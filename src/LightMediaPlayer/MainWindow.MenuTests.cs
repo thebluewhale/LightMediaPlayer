@@ -11,6 +11,50 @@ namespace LightMediaPlayer;
 
 public partial class MainWindow
 {
+    private async Task RunSubtitleMenuTestsAsync(Action<string, bool, object?> check, Func<Func<bool>, int, Task<bool>> until)
+    {
+        void Check(string name, bool ok) => check(name, ok, null);
+        var menu = BuildVideoMenu();
+        var subtitles = (DelayedSubmenuItem)menu.Items[1];
+        Check("subtitle_menu_three_actions", subtitles.Items.Cast<MenuItem>().Select(item => (string)item.Header).SequenceEqual(new[] { "자막 열기", "자막 표시/숨김", "자막 트랙 선택" }));
+        var toggle = (MenuItem)subtitles.Items[1];
+        toggle.RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));
+        Check("subtitle_menu_hide", await until(() => _player!.Spu == -1, 3000));
+        toggle.RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));
+        Check("subtitle_menu_show", await until(() => _player!.Spu >= 0, 3000));
+
+        menu = BuildVideoMenu();
+        subtitles = (DelayedSubmenuItem)menu.Items[1];
+        var tracks = (DelayedSubmenuItem)subtitles.Items[2];
+        var descriptions = _player!.SpuDescription.ToArray();
+        Check("subtitle_menu_tracks_and_selection", tracks.Items.Count == descriptions.Length && tracks.Items.Cast<MenuItem>().Where(item => item.IsChecked).Count() == 1);
+        menu.PlacementTarget = TracksButton;
+        menu.IsOpen = true;
+        await until(() => subtitles.IsLoaded, 3000);
+        subtitles.RaiseEvent(new MouseButtonEventArgs(Mouse.PrimaryDevice, Environment.TickCount, MouseButton.Left) { RoutedEvent = PreviewMouseLeftButtonDownEvent, Source = subtitles });
+        Check("subtitle_menu_click_opens", subtitles.IsSubmenuOpen);
+        await until(() => tracks.IsLoaded, 3000);
+        tracks.IsSubmenuOpen = true;
+        Check("subtitle_tracks_block_early_open", !tracks.IsSubmenuOpen);
+        using (var hover = new HoverIntent(tracks.OpenFromInput))
+        {
+            hover.Start();
+            await Task.Delay(500);
+            Check("subtitle_tracks_wait_one_second", !tracks.IsSubmenuOpen);
+            Check("subtitle_tracks_delayed_open", await until(() => tracks.IsSubmenuOpen, 1500));
+        }
+        var disabledIndex = Array.FindIndex(descriptions, track => track.Id == -1);
+        ((MenuItem)tracks.Items[disabledIndex]).RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));
+        Check("subtitle_menu_track_disable", await until(() => _player.Spu == -1, 3000));
+        var selectedIndex = Array.FindLastIndex(descriptions, track => track.Id >= 0);
+        ((MenuItem)tracks.Items[selectedIndex]).RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));
+        Check("subtitle_menu_track_select", await until(() => _player.Spu == descriptions[selectedIndex].Id && _lastSubtitle == descriptions[selectedIndex].Id, 3000));
+        var refreshedTracks = (MenuItem)((MenuItem)BuildVideoMenu().Items[1]).Items[2];
+        Check("subtitle_menu_selected_track_checked", ((MenuItem)refreshedTracks.Items[selectedIndex]).IsChecked);
+        menu.IsOpen = false;
+        Check("subtitle_menu_nested_close_resets", await until(() => !subtitles.IsSubmenuOpen && !tracks.IsSubmenuOpen, 2000));
+    }
+
     private async Task RunDropAndMenuTestsAsync(string large, string small, string visualDir, Action<string, bool, object?> check, Func<Func<bool>, int, Task<bool>> until)
     {
         void Check(string name, bool ok, object? detail = null) => check(name, ok, detail);

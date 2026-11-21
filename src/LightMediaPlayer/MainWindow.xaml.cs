@@ -445,7 +445,7 @@ public partial class MainWindow : Window
         menu.Items.Add(new Separator());
         var generation = _generation;
         var audio = new MenuItem { Header = "오디오 트랙", IsEnabled = _player != null };
-        var subtitles = new MenuItem { Header = "자막 트랙", IsEnabled = _player != null };
+        var subtitles = CreateSubtitleTrackMenu();
         if (_player != null)
         {
             foreach (var track in _player.AudioTrackDescription)
@@ -454,13 +454,6 @@ public partial class MainWindow : Window
                 var item = new MenuItem { Header = id == -1 ? "사용 안 함" : track.Name, IsCheckable = true, IsChecked = _player.AudioTrack == id };
                 item.Click += (_, _) => { if (_generation == generation) _player?.SetAudioTrack(id); };
                 audio.Items.Add(item);
-            }
-            foreach (var track in _player.SpuDescription)
-            {
-                var id = track.Id;
-                var item = new MenuItem { Header = id == -1 ? "사용 안 함" : track.Name, IsCheckable = true, IsChecked = _player.Spu == id };
-                item.Click += (_, _) => { if (_generation == generation) { _player?.SetSpu(id); if (id >= 0) _lastSubtitle = id; } };
-                subtitles.Items.Add(item);
             }
         }
         menu.Items.Add(audio); menu.Items.Add(subtitles);

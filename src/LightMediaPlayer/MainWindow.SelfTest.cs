@@ -73,6 +73,7 @@ public partial class MainWindow
             Check("subtitle_hide", _player.Spu == -1);
             ToggleSubtitles();
             Check("subtitle_show", await Until(() => _player!.Spu >= 0));
+            await RunSubtitleMenuTestsAsync(Check, Until);
             var before = new Size(Width, Height);
             ToggleFullscreen();
             await Task.Delay(300);
@@ -83,6 +84,8 @@ public partial class MainWindow
             Check("original_aspect_ratio", _player.Scale == 0 && string.IsNullOrEmpty(_player.AspectRatio));
             await StopPlaybackAsync();
             Check("stop_releases_decoder", _player == null && _stopped && SeekBar.Value == 0);
+            var stoppedSubtitles = (System.Windows.Controls.MenuItem)BuildVideoMenu().Items[1];
+            Check("subtitle_menu_without_player_disabled", stoppedSubtitles.Items.Cast<System.Windows.Controls.MenuItem>().All(item => !item.IsEnabled));
             await TogglePlaybackAsync();
             Check("restart_from_beginning", await Until(() => _player?.IsPlaying == true && _player.Time > 100), _player?.Time);
             Check("restart_position", _player!.Time < 4000);

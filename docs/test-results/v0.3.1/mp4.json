@@ -1,0 +1,567 @@
+{
+  "processId": 16324,
+  "passed": true,
+  "checks": [
+    {
+      "name": "initial_playlist_contains_only_opened_file",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "single_item_navigation_does_not_discover_siblings",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "native_playback_started",
+      "passed": true,
+      "details": "D:\\Projects\\LightMediaPlayer\\artifacts\\test-media\\\uD55C\uAE00 \uACBD\uB85C\\\uC601\uC0C110.mp4"
+    },
+    {
+      "name": "video_and_audio_tracks",
+      "passed": true,
+      "details": {
+        "video": 2,
+        "audio": 3
+      }
+    },
+    {
+      "name": "duration_and_seek",
+      "passed": true,
+      "details": 24000
+    },
+    {
+      "name": "playback_clock_advances",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "video_frames_displayed",
+      "passed": true,
+      "details": 40
+    },
+    {
+      "name": "audio_decoded",
+      "passed": true,
+      "details": 238
+    },
+    {
+      "name": "pause_state",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "paused_clock_stable",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "pause_button_becomes_play",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "seek_while_paused",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "resume_playback",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "volume",
+      "passed": true,
+      "details": 32
+    },
+    {
+      "name": "mute",
+      "passed": true,
+      "details": true
+    },
+    {
+      "name": "unmute",
+      "passed": true,
+      "details": false
+    },
+    {
+      "name": "audio_track_selection",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "subtitle_load",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "subtitle_hide",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "subtitle_show",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "subtitle_menu_three_actions",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "subtitle_menu_hide",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "subtitle_menu_show",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "subtitle_menu_tracks_and_selection",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "subtitle_menu_click_opens",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "subtitle_tracks_block_early_open",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "subtitle_tracks_wait_one_second",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "subtitle_tracks_delayed_open",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "subtitle_menu_track_disable",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "subtitle_menu_track_select",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "subtitle_menu_selected_track_checked",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "subtitle_menu_nested_close_resets",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "fullscreen",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "fullscreen_restore",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "original_aspect_ratio",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "stop_releases_decoder",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "subtitle_menu_without_player_disabled",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "restart_from_beginning",
+      "passed": true,
+      "details": 152
+    },
+    {
+      "name": "restart_position",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "software_decode_reopen",
+      "passed": true,
+      "details": 6000
+    },
+    {
+      "name": "missing_file_keeps_current_playback",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "independent_playback_alive",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "end_of_file",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "end_button_becomes_play",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "replay_after_end",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "explicit_add_preserves_current_and_appends",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "next_file_from_explicit_playlist",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "previous_file",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "audio_only_playback",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "local_playlist_open",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "korean_subtitle_encoding",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "external_subtitle_attachment",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "settings_round_trip",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "corrupt_settings_recovery",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "seek_defaults_5_60_300",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "seek_integer_validation",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "seek_preferences_persist_and_merge",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "settings_seven_tabs",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "unused_settings_tabs_empty",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "invalid_setting_disables_save",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "valid_setting_enables_save",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "plain_seek_key_and_osd",
+      "passed": true,
+      "details": "2\uCD08 \uC55E\uC73C\uB85C, 00:00:07"
+    },
+    {
+      "name": "ctrl_seek_key_and_osd",
+      "passed": true,
+      "details": "3\uCD08 \uC55E\uC73C\uB85C, 00:00:10"
+    },
+    {
+      "name": "shift_seek_key_and_osd",
+      "passed": true,
+      "details": "4\uCD08 \uB4A4\uB85C, 00:00:06"
+    },
+    {
+      "name": "rapid_seeks_accumulate",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "volume_osd",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "osd_auto_hides",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "osd_time_includes_hours",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "magnet_negative_monitor_top_left",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "magnet_workarea_bottom_right",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "magnet_leaves_distant_window",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "playlist_item_playback",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "playlist_single_selection_does_not_play",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "playlist_toggle_open",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "playlist_index_labels",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "playlist_toggle_closed",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "playlist_title_sort_and_selection",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "playlist_size_sort",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "playlist_duration_sort_without_interrupt",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "shuffle_changes_every_time",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "playlist_append_no_playback",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "duplicate_entry_identity",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "remove_selected_only",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "remove_playing_item_keeps_playback",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "playlist_next",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "playlist_previous",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "playlist_edit_cancels_stale_sort",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "empty_playlist_navigation_disabled",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "play_from_empty_then_added_queue",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "playlist_drop_appends_in_order",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "playlist_drop_keeps_current_playback",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "playlist_nonfile_drop_ignored",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "playlist_drop_keeps_paused_state",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "settings_icon_has_room",
+      "passed": true,
+      "details": {
+        "available": 26,
+        "glyph": 17
+      }
+    },
+    {
+      "name": "video_menu_exact_nine_items",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "playback_submenu_exact_four_items",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "fullscreen_and_settings_are_leaf_actions",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "submenu_blocks_default_early_open",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "submenu_stays_closed_before_one_second",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "submenu_opens_after_hover_delay",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "hover_leave_cancels_pending_open",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "submenu_header_click_opens_immediately",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "closed_menu_resets_submenu",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "leaf_hover_does_not_execute",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "menu_play_resumes",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "menu_play_never_toggles_pause",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "menu_pause_action",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "menu_pause_never_toggles_play",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "fullscreen_menu_click",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "settings_menu_click_opens_dialog",
+      "passed": true,
+      "details": null
+    },
+    {
+      "name": "unsupported_file_error_and_fallback",
+      "passed": true,
+      "details": "\uD30C\uC77C\uC774 \uC190\uC0C1\uB418\uC5C8\uAC70\uB098 \uC9C0\uC6D0\uD558\uC9C0 \uC54A\uB294 \uD615\uC2DD\uC785\uB2C8\uB2E4. DRM \uD30C\uC77C\uACFC \uC77C\uBD80 \uC804\uC6A9 \uD615\uC2DD\uC740 \uC7AC\uC0DD\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4."
+    }
+  ]
+}
