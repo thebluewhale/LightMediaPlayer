@@ -1,0 +1,8 @@
+.tools/
+artifacts/
+**/bin/
+**/obj/
+**/Generated/
+*.user
+.vs/
+portable-data/

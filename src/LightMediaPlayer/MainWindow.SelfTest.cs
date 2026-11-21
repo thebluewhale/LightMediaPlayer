@@ -1,0 +1,132 @@
+using System.IO;
+using System.Text.Json;
+using System.Windows;
+using LibVLCSharp.Shared;
+
+namespace LightMediaPlayer;
+
+public partial class MainWindow
+{
+    // Opt-in integration probe: uses the same WPF window, packaged engine and commands.
+    // Invoked only by scripts/test.ps1; no separate fake playback implementation.
+    private async Task RunSelfTestAsync()
+    {
+        var index = Array.IndexOf(_arguments, "--self-test-report");
+        var report = _arguments[index + 1];
+        var file = _arguments[index + 2];
+        var checks = new List<object>();
+        var failed = false;
+        void Check(string name, bool ok, object? details = null)
+        {
+            checks.Add(new { name, passed = ok, details });
+            if (!ok) failed = true;
+        }
+        async Task<bool> Until(Func<bool> predicate, int timeout = 15000)
+        {
+            var start = Environment.TickCount64;
+            while (Environment.TickCount64 - start < timeout) { if (predicate()) return true; await Task.Delay(100); }
+            return predicate();
+        }
+        try
+        {
+            await OpenPathAsync(file);
+            Check("native_playback_started", await Until(() => _player?.IsPlaying == true && _player.Time > 700), _path);
+            Check("video_and_audio_tracks", _player!.VideoTrackCount > 0 && _player.AudioTrackCount >= 2, new { video = _player.VideoTrackCount, audio = _player.AudioTrackCount });
+            Check("duration_and_seek", _player.Length > 15000 && _player.IsSeekable, _player.Length);
+            var prior = _player.Time;
+            await Task.Delay(700);
+            Check("playback_clock_advances", _player.Time > prior);
+            Check("video_frames_displayed", await Until(() => _media!.Statistics.DisplayedPictures > 0), _media!.Statistics.DisplayedPictures);
+            Check("audio_decoded", _media.Statistics.DecodedAudio > 0, _media.Statistics.DecodedAudio);
+            await TogglePlaybackAsync();
+            Check("pause_state", await Until(() => _player!.State == VLCState.Paused));
+            await Task.Delay(200);
+            prior = _player!.Time;
+            await Task.Delay(600);
+            Check("paused_clock_stable", Math.Abs(_player.Time - prior) < 150);
+            Check("pause_button_becomes_play", (string)PlayButton.Content == "\uE768");
+            SeekTo(9000);
+            Check("seek_while_paused", await Until(() => Math.Abs(_player!.Time - 9000) < 1600));
+            await TogglePlaybackAsync();
+            Check("resume_playback", await Until(() => _player!.IsPlaying));
+            VolumeBar.Value = 32;
+            Check("volume", await Until(() => _player!.Volume == 32), _player!.Volume);
+            if (!_muted) ToggleMute();
+            Check("mute", await Until(() => _player.Mute), _player.Mute);
+            ToggleMute();
+            Check("unmute", await Until(() => !_player.Mute), _player.Mute);
+            var tracks = _player.AudioTrackDescription.Where(t => t.Id >= 0).ToArray();
+            if (tracks.Length >= 2) { _player.SetAudioTrack(tracks[1].Id); Check("audio_track_selection", await Until(() => _player!.AudioTrack == tracks[1].Id)); }
+            else Check("audio_track_selection", false);
+            var sub = Path.ChangeExtension(file, ".srt");
+            if (File.Exists(sub)) await LoadSubtitleAsync(sub);
+            Check("subtitle_load", await Until(() => _player!.SpuDescription.Any(t => t.Id >= 0)));
+            var subId = _player.SpuDescription.FirstOrDefault(t => t.Id >= 0).Id;
+            _player.SetSpu(subId);
+            ToggleSubtitles();
+            Check("subtitle_hide", _player.Spu == -1);
+            ToggleSubtitles();
+            Check("subtitle_show", await Until(() => _player!.Spu >= 0));
+            var before = new Size(Width, Height);
+            ToggleFullscreen();
+            await Task.Delay(300);
+            Check("fullscreen", _fullscreen && TitleBar.Visibility == Visibility.Collapsed && WindowState == WindowState.Maximized);
+            ToggleFullscreen();
+            await Task.Delay(300);
+            Check("fullscreen_restore", !_fullscreen && TitleBar.Visibility == Visibility.Visible && Math.Abs(Width - before.Width) < 2);
+            Check("original_aspect_ratio", _player.Scale == 0 && string.IsNullOrEmpty(_player.AspectRatio));
+            await StopPlaybackAsync();
+            Check("stop_releases_decoder", _player == null && _stopped && SeekBar.Value == 0);
+            await TogglePlaybackAsync();
+            Check("restart_from_beginning", await Until(() => _player?.IsPlaying == true && _player.Time > 100), _player?.Time);
+            Check("restart_position", _player!.Time < 4000);
+            await OpenPathAsync(file, software: true, resume: 6000);
+            Check("software_decode_reopen", await Until(() => _player?.IsPlaying == true && _player.Time >= 5500), _player?.Time);
+            var original = _path;
+            await OpenPathAsync(Path.Combine(Path.GetDirectoryName(file)!, "does-not-exist.mp4"));
+            Check("missing_file_keeps_current_playback", _path == original && _player!.IsPlaying && StatusText.Text.Contains("찾을 수"));
+            // Hold playback so two concurrently launched probes overlap in time.
+            AppLog.Write("CONCURRENCY_START");
+            await Task.Delay(3500);
+            Check("independent_playback_alive", _player!.IsPlaying);
+            AppLog.Write("CONCURRENCY_END");
+            SeekTo(_player.Length - 1000);
+            Check("end_of_file", await Until(() => _ended, 7000));
+            Check("end_button_becomes_play", (string)PlayButton.Content == "\uE768");
+            await TogglePlaybackAsync();
+            Check("replay_after_end", await Until(() => _player?.IsPlaying == true && !_ended));
+            var dir = Path.GetDirectoryName(file)!;
+            await OpenPathAsync(Path.Combine(dir, "영상2.mkv"));
+            await Until(() => _player?.IsPlaying == true);
+            await MoveFileAsync(1);
+            Check("next_file_natural_order", Path.GetFileName(_path) == "영상10.mp4" && await Until(() => _player?.IsPlaying == true));
+            await MoveFileAsync(-1);
+            Check("previous_file", Path.GetFileName(_path) == "영상2.mkv" && await Until(() => _player?.IsPlaying == true));
+            await OpenPathAsync(Path.Combine(dir, "음악.flac"));
+            Check("audio_only_playback", await Until(() => _player?.IsPlaying == true && EmptyTitle.Text == "음악 재생" && EmptyState.Visibility == Visibility.Visible));
+            await OpenPathAsync(Path.Combine(dir, "sample.m3u"));
+            Check("local_playlist_open", Path.GetFileName(_path) == "영상2.mkv" && _neighbors.Length == 2 && await Until(() => _player?.IsPlaying == true));
+            var koreanSubtitle = Path.Combine(dir, "cp949.srt");
+            var normalized = await NormalizeSubtitleAsync(koreanSubtitle);
+            Check("korean_subtitle_encoding", (await File.ReadAllTextAsync(normalized)).Contains("한글 자막"));
+            await LoadSubtitleAsync(koreanSubtitle);
+            Check("external_subtitle_attachment", _externalSubtitle == koreanSubtitle);
+            var settingsPath = Path.Combine(Path.GetDirectoryName(report)!, $"settings-{Environment.ProcessId}.json");
+            new PlayerSettings { Volume = 43, Muted = true, Width = 880, Height = 520, Left = 40, Top = 50 }.Save(settingsPath);
+            var settings = PlayerSettings.Load(settingsPath);
+            Check("settings_round_trip", settings.Volume == 43 && settings.Muted && settings.Width == 880 && settings.Top == 50);
+            await File.WriteAllTextAsync(settingsPath, "invalid json");
+            Check("corrupt_settings_recovery", PlayerSettings.Load(settingsPath).Volume == 75);
+            var invalid = Path.Combine(Path.GetDirectoryName(file)!, "broken.mp4");
+            if (File.Exists(invalid))
+            {
+                await OpenPathAsync(invalid);
+                Check("unsupported_file_error_and_fallback", await Until(() => _software && _stopped && StatusText.Text.Contains("지원하지")), StatusText.Text);
+            }
+        }
+        catch (Exception ex) { failed = true; checks.Add(new { name = "exception", passed = false, details = ex.ToString() }); }
+        Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(report))!);
+        await File.WriteAllTextAsync(report, JsonSerializer.Serialize(new { processId = Environment.ProcessId, passed = !failed, checks }, new JsonSerializerOptions { WriteIndented = true }));
+        Close();
+    }
+}

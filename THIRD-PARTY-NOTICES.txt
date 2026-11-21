@@ -1,0 +1,23 @@
+Light Media Player 0.1.0 — third-party software
+
+LibVLC 3.0.24 and LibVLCSharp 3.10.2
+Copyright VideoLAN and respective contributors.
+Core libraries: LGPL-2.1-or-later. Individual plugins and dependencies
+may have additional licenses; see the bundled licenses directory.
+https://www.videolan.org/vlc/libvlc.html
+https://code.videolan.org/videolan/LibVLCSharp/-/tree/3.10.2
+https://download.videolan.org/pub/videolan/vlc/3.0.24/
+https://code.videolan.org/videolan/vlc/-/tree/3.0.24
+https://code.videolan.org/videolan/vlc/-/tree/3.0.24/contrib/src
+
+.NET 10 / Windows Desktop runtime
+Copyright .NET Foundation and contributors. MIT and third-party notices.
+https://github.com/dotnet/runtime
+https://github.com/dotnet/wpf
+
+Native libraries are dynamically loaded. To use a modified compatible
+x64 LibVLC distribution, place libvlc.dll, libvlccore.dll and its plugins
+in a libvlc directory beside LightMediaPlayer.exe.
+Bundled license texts are extracted with the engine under:
+%LOCALAPPDATA%\LightMediaPlayer\runtime\<payload hash>\licenses
+This POC includes its application source and reproducible build scripts.
