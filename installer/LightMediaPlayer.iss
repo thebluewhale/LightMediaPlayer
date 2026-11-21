@@ -1,5 +1,13 @@
 #define AppName "Light Media Player"
-#define AppVersion "0.1.0"
+#ifndef AppVersion
+#define AppVersion "0.2.0"
+#endif
+#ifndef PublishDir
+#define PublishDir "..\artifacts\publish\v" + AppVersion
+#endif
+#ifndef ReleaseDir
+#define ReleaseDir "..\artifacts\release\v" + AppVersion
+#endif
 
 [Setup]
 AppId={{E2B968A7-5672-4636-B35F-9787AC7D518A}
@@ -11,7 +19,7 @@ DefaultGroupName={#AppName}
 PrivilegesRequired=lowest
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
-OutputDir=..\artifacts\release
+OutputDir={#ReleaseDir}
 OutputBaseFilename=LightMediaPlayer-Setup
 SetupIconFile=..\src\LightMediaPlayer\Assets\player.ico
 UninstallDisplayIcon={app}\LightMediaPlayer.exe
@@ -32,7 +40,7 @@ Name: "desktopicon"; Description: "바탕 화면에 바로가기 만들기"; Fla
 Name: "fileassoc"; Description: "미디어 파일의 연결 프로그램 후보로 등록 (기본 앱은 Windows 설정에서 선택)"
 
 [Files]
-Source: "..\artifacts\publish\LightMediaPlayer.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#PublishDir}\LightMediaPlayer.exe"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\THIRD-PARTY-NOTICES.txt"; DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]

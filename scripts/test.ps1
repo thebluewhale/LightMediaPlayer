@@ -1,9 +1,11 @@
-param([string]$Executable = "$PSScriptRoot\..\artifacts\release\LightMediaPlayer-Portable-0.1.0.exe")
+param([string]$Executable, [string]$ResultsDirectory)
 $ErrorActionPreference = 'Stop'
 $root = Split-Path $PSScriptRoot
+$version = ([xml](Get-Content (Join-Path $root 'src/LightMediaPlayer/LightMediaPlayer.csproj') -Raw)).Project.PropertyGroup.Version
+if (!$Executable) { $Executable = Join-Path $root "artifacts/release/v$version/LightMediaPlayer-Portable-$version.exe" }
 $exe = (Resolve-Path $Executable).Path
 $media = Join-Path $root 'artifacts\test-media\한글 경로'
-$reports = Join-Path $root 'artifacts\test-results'
+$reports = if ($ResultsDirectory) { [IO.Path]::GetFullPath($ResultsDirectory) } else { Join-Path $root "artifacts/test-results/v$version" }
 New-Item -ItemType Directory -Force $reports | Out-Null
 $jobs = @()
 foreach ($pair in @(@('mkv', '영상2.mkv'), @('mp4', '영상10.mp4'))) {

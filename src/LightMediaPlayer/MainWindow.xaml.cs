@@ -25,8 +25,6 @@ public partial class MainWindow : Window
     private VlcPlayer? _player;
     private Media? _media;
     private string? _path;
-    private string[] _neighbors = [];
-    private string[]? _playlist;
     private int _generation;
     private bool _ready, _closing, _canClose, _seeking, _stopped = true, _ended, _fullscreen, _software;
     private bool _muted;
@@ -42,6 +40,11 @@ public partial class MainWindow : Window
     {
         _arguments = arguments;
         InitializeComponent();
+        PlaylistList.ItemsSource = _queue;
+        SizeChanged += (_, _) => { if (PlaylistPanel.Visibility == Visibility.Visible) PlaylistColumn.Width = new GridLength(Math.Min(300, Math.Max(220, ActualWidth - 480))); };
+        _osdTimer.Tick += (_, _) => { OsdBubble.Visibility = Visibility.Collapsed; _osdTimer.Stop(); };
+        SourceInitialized += (_, _) => _magnet = new WindowMagnet(this, () => !_fullscreen);
+        Activated += (_, _) => { if (!_arguments.Contains("--self-test-report")) RefreshSeekPreferences(); };
         VideoOverlay.Loaded += (_, _) =>
         {
             var overlayWindow = Window.GetWindow(VideoOverlay);
@@ -109,7 +112,7 @@ public partial class MainWindow : Window
         Dispatcher.BeginInvoke(() => { if (!_closing && generation == _generation) action(); });
     }
 
-    private async Task OpenPathAsync(string input, bool software = false, long resume = 0, bool pause = false, bool retainSubtitle = false)
+    private async Task OpenPathAsync(string input, bool software = false, long resume = 0, bool pause = false, bool retainSubtitle = false, PlaylistEntry? entry = null)
     {
         if (!_ready || _closing) return;
         string path;
@@ -123,8 +126,8 @@ public partial class MainWindow : Window
             if (entries != null)
             {
                 if (entries.Length == 0) { SetStatus("목록에 재생할 로컬 미디어 파일이 없습니다.", true); return; }
-                _playlist = entries;
-                await OpenPathAsync(entries[0], software, resume, pause, retainSubtitle);
+                ReplaceQueue(entries);
+                await OpenPathAsync(entries[0], software, resume, pause, retainSubtitle, _queue[0]);
                 return;
             }
         }
@@ -146,9 +149,16 @@ public partial class MainWindow : Window
             _lastSubtitle = -1;
             _hasPlayableStreams = false;
             _seeking = false;
+            _seekTarget = null;
             if (!retainSubtitle) _externalSubtitle = null;
-            if (_playlist != null && !_playlist.Contains(path, StringComparer.OrdinalIgnoreCase)) _playlist = null;
-            _neighbors = _playlist ?? await Task.Run(() => MediaFiles.Neighbors(path));
+            entry ??= retainSubtitle && _currentEntry?.Path == path ? _currentEntry : _queue.FirstOrDefault(e => string.Equals(e.Path, path, StringComparison.OrdinalIgnoreCase));
+            if (entry == null)
+            {
+                ReplaceQueue(await Task.Run(() => MediaFiles.Neighbors(path)));
+                entry = _queue.First(e => string.Equals(e.Path, path, StringComparison.OrdinalIgnoreCase));
+            }
+            _currentEntry = entry;
+            RefreshQueue();
             FileText.Text = Path.GetFileName(path);
             FileText.ToolTip = path;
             Title = Path.GetFileName(path) + " — Light Media Player";
@@ -174,7 +184,7 @@ public partial class MainWindow : Window
             current.Opening += (_, _) => Post(generation, () => SetStatus("파일을 여는 중…"));
             current.Buffering += (_, args) => Post(generation, () => { if (args.Cache < 100) SetStatus($"버퍼링 {args.Cache:0}%"); });
             current.Playing += (_, _) => Post(generation, OnPlaying);
-            current.Paused += (_, _) => Post(generation, () => { SetStatus("일시정지"); UpdateButtons(); });
+            current.Paused += (_, _) => Post(generation, () => { SetStatus("일시정지"); ShowOsd("일시정지 · " + FormatOsdTime(current.Time)); UpdateButtons(); });
             current.Stopped += (_, _) => Post(generation, () => { _stopped = true; UpdateButtons(); });
             current.EndReached += (_, _) => Post(generation, () =>
             {
@@ -201,6 +211,7 @@ public partial class MainWindow : Window
         _player!.Volume = (int)VolumeBar.Value;
         _player.Mute = _muted;
         SetStatus(_software ? "재생 중 · 소프트웨어 디코딩" : "재생 중");
+        ShowOsd("재생 · " + FormatOsdTime(_player.Time));
         UpdateButtons();
         AppLog.Write("PLAYING " + _path);
     }
@@ -259,6 +270,7 @@ public partial class MainWindow : Window
             SeekBar.IsEnabled = false;
             TimeText.Text = "00:00 / 00:00";
             SetStatus("정지 · 재생하면 처음부터 시작합니다");
+            ShowOsd("정지 · 00:00:00");
             EmptyState.Visibility = Visibility.Visible;
             EmptyTitle.Text = "재생이 정지되었습니다";
             EmptyDetail.Text = Path.GetFileName(_path);
@@ -305,22 +317,32 @@ public partial class MainWindow : Window
         PlayButton.ToolTip = playing ? "일시정지 (Space)" : "재생 (Space)";
         System.Windows.Automation.AutomationProperties.SetName(PlayButton, playing ? "일시정지" : "재생");
         StopButton.IsEnabled = _path != null && !_stopped;
-        var index = Array.FindIndex(_neighbors, p => string.Equals(p, _path, StringComparison.OrdinalIgnoreCase));
-        PreviousButton.IsEnabled = index > 0;
-        NextButton.IsEnabled = index >= 0 && index < _neighbors.Length - 1;
+        var previous = NavigationTarget(-1);
+        var next = NavigationTarget(1);
+        PreviousButton.IsEnabled = previous >= 0 && previous < _queue.Count;
+        NextButton.IsEnabled = next >= 0 && next < _queue.Count;
+        if (PlaylistPrevious != null) PlaylistPrevious.IsEnabled = PreviousButton.IsEnabled;
+        if (PlaylistNext != null) PlaylistNext.IsEnabled = NextButton.IsEnabled;
     }
 
     private async Task MoveFileAsync(int direction)
     {
-        var index = Array.FindIndex(_neighbors, p => string.Equals(p, _path, StringComparison.OrdinalIgnoreCase));
-        var next = index + direction;
-        if (index >= 0 && next >= 0 && next < _neighbors.Length) await OpenPathAsync(_neighbors[next]);
+        var next = NavigationTarget(direction);
+        if (next >= 0 && next < _queue.Count) await PlayEntryAsync(_queue[next]);
     }
 
     private void SeekTo(long position)
     {
         if (_player?.IsSeekable == true && !_stopped && !_ended)
-            _player.Time = Math.Clamp(position, 0, Math.Max(0, _player.Length - 1));
+        {
+            var before = EffectiveSeekTime();
+            var target = Math.Clamp(position, 0, Math.Max(0, _player.Length - 1));
+            _player.Time = target;
+            _seekTarget = target;
+            _seekRequestedAt = Environment.TickCount64;
+            var delta = target - before;
+            ShowOsd($"{Math.Abs(delta) / 1000:0}초 {(delta >= 0 ? "앞으로" : "뒤로")}, {FormatOsdTime(target)}");
+        }
     }
     private void SeekAt(MouseEventArgs e)
     {
@@ -332,9 +354,9 @@ public partial class MainWindow : Window
     private void Seek_MouseMove(object sender, MouseEventArgs e) { if (_seeking) SeekAt(e); }
     private void Seek_MouseUp(object sender, MouseButtonEventArgs e) { if (!_seeking) return; SeekAt(e); _seeking = false; SeekTo((long)SeekBar.Value); SeekBar.ReleaseMouseCapture(); e.Handled = true; }
     private void Seek_LostCapture(object sender, MouseEventArgs e) { if (_seeking) { _seeking = false; SeekTo((long)SeekBar.Value); } }
-    private void Volume_Changed(object sender, RoutedPropertyChangedEventArgs<double> e) { if (_player != null) _player.Volume = (int)e.NewValue; if (MuteButton != null) RefreshVolume(); }
+    private void Volume_Changed(object sender, RoutedPropertyChangedEventArgs<double> e) { if (_player != null) _player.Volume = (int)e.NewValue; if (MuteButton != null) RefreshVolume(); if (_ready) ShowOsd($"{(int)e.NewValue}%"); }
     private void RefreshVolume() { MuteButton.Content = _muted || VolumeBar.Value == 0 ? "\uE74F" : "\uE767"; MuteButton.ToolTip = $"{(_muted ? "음소거 해제" : "음소거")} (M) · {(int)VolumeBar.Value}%"; VolumeBar.ToolTip = $"음량 {(int)VolumeBar.Value}%"; }
-    private void ToggleMute() { _muted = !_muted; if (_player != null) _player.Mute = _muted; RefreshVolume(); }
+    private void ToggleMute() { _muted = !_muted; if (_player != null) _player.Mute = _muted; RefreshVolume(); ShowOsd(_muted ? "음소거 · 0%" : $"{(int)VolumeBar.Value}%"); }
 
     private void OpenDialog()
     {
@@ -444,7 +466,7 @@ public partial class MainWindow : Window
         Add("전체화면 / 창 모드    Alt+Enter", ToggleFullscreen);
         Add("소프트웨어 디코딩으로 다시 열기", () => { if (_path != null) _ = OpenPathAsync(_path, true, Math.Max(0, _player?.Time ?? 0), _player?.State == VLCState.Paused, true); }, _path != null);
         Add("로그 폴더 열기", () => { Directory.CreateDirectory(AppLog.DirectoryPath); Process.Start(new ProcessStartInfo(AppLog.DirectoryPath) { UseShellExecute = true }); });
-        Add("단축키 안내", () => MessageBox.Show(this, "Space  재생 / 일시정지\nS  정지\n← / →  5초 이동 (Shift: 30초)\n↑ / ↓  음량 5% 조절\nM  음소거\nAlt+Enter / F11 / 영상 더블클릭  전체화면\nEsc  전체화면 해제\nCtrl+O  파일 열기\nCtrl+Shift+O  자막 열기\nV  자막 표시 / 숨김\nPage Up / Page Down  이전 / 다음 파일\nHome  처음으로 이동", "단축키"));
+        Add("단축키 안내", () => MessageBox.Show(this, $"Space  재생 / 일시정지\nS  정지\n← / →  {_settings.SeekSeconds}초 이동\nCtrl + ← / →  {_settings.CtrlSeekSeconds}초 이동\nShift + ← / →  {_settings.ShiftSeekSeconds}초 이동\n↑ / ↓  음량 5% 조절\nM  음소거\nAlt+Enter / F11 / 영상 더블클릭  전체화면\nEsc  전체화면 해제\nCtrl+O  파일 열기\nCtrl+Shift+O  자막 열기\nV  자막 표시 / 숨김\nPage Up / Page Down  이전 / 다음 파일\nHome  처음으로 이동", "단축키"));
         Add("오픈소스 정보", () =>
         {
             using var stream = Assembly.GetExecutingAssembly().GetManifestResourceStream("notices.txt")!;
@@ -484,10 +506,14 @@ public partial class MainWindow : Window
         var key = e.Key == Key.System ? e.SystemKey : e.Key;
         var ctrl = Keyboard.Modifiers.HasFlag(ModifierKeys.Control);
         var shift = Keyboard.Modifiers.HasFlag(ModifierKeys.Shift);
+        if (PlaylistList.IsKeyboardFocusWithin && key is Key.Up or Key.Down or Key.Home or Key.End) return;
+        // Mark handled before an await so ListBox does not also page/select while
+        // Page Up/Down is asynchronously opening the adjacent media item.
+        e.Handled = true;
         if (ctrl && key == Key.O) { if (shift) SubtitleDialog(); else OpenDialog(); }
         else if (key == Key.Space) await TogglePlaybackAsync();
         else if (key == Key.S) await StopPlaybackAsync();
-        else if (key == Key.Left || key == Key.Right) SeekTo((_player?.Time ?? 0) + (key == Key.Right ? 1 : -1) * (shift ? 30000 : 5000));
+        else if (key == Key.Left || key == Key.Right) SeekByKey(key == Key.Right ? 1 : -1, ctrl, shift);
         else if (key == Key.Up || key == Key.Down) VolumeBar.Value = Math.Clamp(VolumeBar.Value + (key == Key.Up ? 5 : -5), 0, 100);
         else if (key == Key.M) ToggleMute();
         else if (key == Key.V) ToggleSubtitles();
@@ -496,7 +522,7 @@ public partial class MainWindow : Window
         else if (key == Key.PageDown) await MoveFileAsync(1);
         else if (key == Key.F11 || (key == Key.Enter && Keyboard.Modifiers.HasFlag(ModifierKeys.Alt))) ToggleFullscreen();
         else if (key == Key.Escape && _fullscreen) ToggleFullscreen();
-        else return;
+        else { e.Handled = false; return; }
         e.Handled = true;
     }
 
@@ -522,12 +548,27 @@ public partial class MainWindow : Window
         if (_closing) return;
         _closing = true;
         _timer.Stop();
+        _osdTimer.Stop();
+        _magnet?.Dispose();
+        CancelSorting();
         ++_generation;
         var bounds = _fullscreen ? _normalBounds : WindowState == WindowState.Normal ? new Rect(Left, Top, Width, Height) : RestoreBounds;
         _settings.Width = bounds.Width; _settings.Height = bounds.Height; _settings.Left = bounds.Left; _settings.Top = bounds.Top;
         _settings.Maximized = (_fullscreen ? _beforeFullscreen : WindowState) == WindowState.Maximized;
         _settings.Volume = (int)VolumeBar.Value; _settings.Muted = _muted;
-        if (!_arguments.Contains("--self-test-report")) _settings.Save();
+        if (!_arguments.Contains("--self-test-report"))
+        {
+            try
+            {
+                PlayerSettings.Update(saved =>
+                {
+                    saved.Width = _settings.Width; saved.Height = _settings.Height;
+                    saved.Left = _settings.Left; saved.Top = _settings.Top; saved.Maximized = _settings.Maximized;
+                    saved.Volume = _settings.Volume; saved.Muted = _settings.Muted;
+                });
+            }
+            catch (Exception ex) { AppLog.Write("Settings: " + ex.Message); }
+        }
         await _operations.WaitAsync();
         try { await ReleasePlayerAsync(); var vlc = _vlc; _vlc = null; if (vlc != null) await Task.Run(vlc.Dispose); }
         catch (Exception ex) { AppLog.Write(ex.ToString()); }

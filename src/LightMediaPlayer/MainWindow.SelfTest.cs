@@ -19,6 +19,7 @@ public partial class MainWindow
         void Check(string name, bool ok, object? details = null)
         {
             checks.Add(new { name, passed = ok, details });
+            AppLog.Write($"CHECK {name}: {ok}");
             if (!ok) failed = true;
         }
         async Task<bool> Until(Func<bool> predicate, int timeout = 15000)
@@ -117,6 +118,7 @@ public partial class MainWindow
             Check("settings_round_trip", settings.Volume == 43 && settings.Muted && settings.Width == 880 && settings.Top == 50);
             await File.WriteAllTextAsync(settingsPath, "invalid json");
             Check("corrupt_settings_recovery", PlayerSettings.Load(settingsPath).Volume == 75);
+            await RunInteractionTestsAsync(file, report, Check, Until);
             var invalid = Path.Combine(Path.GetDirectoryName(file)!, "broken.mp4");
             if (File.Exists(invalid))
             {

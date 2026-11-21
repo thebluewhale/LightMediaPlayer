@@ -17,4 +17,9 @@ Copy-Item (Join-Path $dir '영상2.srt') (Join-Path $dir '영상10.srt') -Force
 "#EXTM3U`n영상2.mkv`n영상10.mp4" | Set-Content (Join-Path $dir 'sample.m3u') -Encoding utf8
 [Text.Encoding]::RegisterProvider([Text.CodePagesEncodingProvider]::Instance)
 [IO.File]::WriteAllText((Join-Path $dir 'cp949.srt'), $subtitle, [Text.Encoding]::GetEncoding(949))
+New-Item -ItemType Directory -Force (Join-Path $dir 'playlist') | Out-Null
+& $ffmpeg -hide_banner -loglevel error -y -i (Join-Path $dir '영상10.mp4') -t 3 -map 0:v -map 0:a:0 -c copy (Join-Path $dir 'playlist/clip2.mp4')
+if ($LASTEXITCODE -ne 0) { throw 'Short playlist fixture generation failed' }
+& $ffmpeg -hide_banner -loglevel error -y -i (Join-Path $dir '영상10.mp4') -t 20 -map 0:v -map 0:a:0 -c copy (Join-Path $dir 'playlist/clip10.mp4')
+if ($LASTEXITCODE -ne 0) { throw 'Long playlist fixture generation failed' }
 Write-Output $dir

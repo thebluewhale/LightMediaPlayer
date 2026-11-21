@@ -2,8 +2,9 @@
  Title="Light Media Player" Width="1040" Height="680" MinWidth="680" MinHeight="400" Background="#11161C" Foreground="#E8EDF3" FontFamily="Segoe UI, Malgun Gothic" WindowStyle="None" ResizeMode="CanResize" AllowDrop="True" UseLayoutRounding="True" Loaded="Window_Loaded" Closing="Window_Closing" PreviewKeyDown="Window_KeyDown" DragOver="Window_DragOver" Drop="Window_Drop">
  <shell:WindowChrome.WindowChrome><shell:WindowChrome CaptionHeight="44" ResizeBorderThickness="6" GlassFrameThickness="0" CornerRadius="0" UseAeroCaptionButtons="False"/></shell:WindowChrome.WindowChrome>
  <Border BorderBrush="#313A44" BorderThickness="1"><Grid>
+  <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition x:Name="PlaylistColumn" Width="0"/></Grid.ColumnDefinitions>
   <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
-  <Grid x:Name="TitleBar" Height="44" Background="#181F27">
+  <Grid x:Name="TitleBar" Grid.ColumnSpan="2" Height="44" Background="#181F27">
    <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
    <TextBlock Text="▶" Foreground="{StaticResource Accent}" FontSize="15" Margin="18,0,10,0" VerticalAlignment="Center"/>
    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center"><TextBlock Text="LIGHT" FontWeight="SemiBold" FontSize="13"/><TextBlock Text="  MEDIA PLAYER" Foreground="#8A98A8" FontSize="11" VerticalAlignment="Center" Margin="2,0,0,0"/></StackPanel>
@@ -18,6 +19,9 @@
       <TextBlock x:Name="EmptyDetail" Text="영상이나 음악 파일을 여기에 놓으세요" Foreground="#8593A3" FontSize="13" TextAlignment="Center" Margin="0,12,0,24" TextWrapping="Wrap"/>
       <Button x:Name="EmptyOpenButton" Content="파일 열기    Ctrl+O" Foreground="#152722" Background="{StaticResource Accent}" HorizontalAlignment="Center" Padding="22,11" Click="Open_Click"/>
      </StackPanel>
+     <Border x:Name="OsdBubble" Visibility="Collapsed" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="16" Padding="11,7" CornerRadius="5" Background="#B81B242D" IsHitTestVisible="False" MaxWidth="500">
+      <TextBlock x:Name="OsdText" Foreground="#F0F5FA" FontSize="13" TextWrapping="Wrap"/>
+     </Border>
     </Grid>
    </vlc:VideoView>
   </Grid>
@@ -26,7 +30,7 @@
    <Slider x:Name="SeekBar" Minimum="0" Maximum="1" Value="0" IsEnabled="False" PreviewMouseLeftButtonDown="Seek_MouseDown" PreviewMouseMove="Seek_MouseMove" PreviewMouseLeftButtonUp="Seek_MouseUp" LostMouseCapture="Seek_LostCapture" AutomationProperties.Name="재생 위치"/>
    <TextBlock x:Name="TimeText" Grid.Column="1" Text="00:00 / 00:00" FontSize="11" Foreground="#9CAAB9" VerticalAlignment="Center" Margin="15,0,12,0" FontFamily="Consolas"/>
    <Button x:Name="MuteButton" Grid.Column="2" Content="&#xE767;" FontFamily="Segoe MDL2 Assets" FontSize="16" Width="38" Padding="8" Click="Mute_Click" ToolTip="음소거 (M)" AutomationProperties.Name="음소거"/>
-   <Slider x:Name="VolumeBar" Grid.Column="3" Minimum="0" Maximum="100" Value="75" IsMoveToPointEnabled="True" ValueChanged="Volume_Changed" AutomationProperties.Name="음량"/>
+   <Slider x:Name="VolumeBar" Grid.Column="3" Minimum="0" Maximum="100" Value="75" IsMoveToPointEnabled="True" IsSnapToTickEnabled="True" TickFrequency="1" ValueChanged="Volume_Changed" AutomationProperties.Name="음량"/>
   </Grid>
   <Grid Grid.Row="3" Margin="17,5,17,12" Height="44">
    <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
@@ -40,9 +44,26 @@
    <StackPanel Grid.Column="2" Orientation="Horizontal">
     <Button Content="&#xE8E5;" FontFamily="Segoe MDL2 Assets" FontSize="17" Width="38" Click="Open_Click" ToolTip="파일 열기 (Ctrl+O)" AutomationProperties.Name="파일 열기"/>
     <Button x:Name="TracksButton" Content="&#xE712;" FontFamily="Segoe MDL2 Assets" FontSize="17" Width="38" Click="Tracks_Click" ToolTip="자막 · 트랙 · 재생 메뉴" AutomationProperties.Name="트랙 메뉴"/>
-    <Button Content="&#xE713;" FontFamily="Segoe MDL2 Assets" FontSize="17" Width="38" Opacity="0.45" ToolTip="설정 — 준비 중" AutomationProperties.Name="설정 (준비 중)"/>
-    <Button Content="&#xE8F1;" FontFamily="Segoe MDL2 Assets" FontSize="17" Width="38" Opacity="0.45" ToolTip="재생목록 — 준비 중" AutomationProperties.Name="재생목록 (준비 중)"/>
+    <Button Content="&#xE713;" FontFamily="Segoe MDL2 Assets" FontSize="17" Width="38" Click="Settings_Click" ToolTip="설정" AutomationProperties.Name="설정"/>
+    <Button x:Name="PlaylistToggle" Content="&#xE8F1;" FontFamily="Segoe MDL2 Assets" FontSize="17" Width="38" Click="PlaylistToggle_Click" ToolTip="재생목록 표시 / 숨김" AutomationProperties.Name="재생목록"/>
    </StackPanel>
   </Grid>
+  <Border x:Name="PlaylistPanel" Grid.Column="1" Grid.Row="1" Grid.RowSpan="3" Visibility="Collapsed" Background="#181F27" BorderBrush="#313A44" BorderThickness="1,0,0,0" Padding="12">
+   <Grid><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+    <TextBlock Text="재생목록" Foreground="#DFE8F2" FontSize="14" FontWeight="SemiBold" Margin="4,5,0,16"/>
+    <ListBox x:Name="PlaylistList" Grid.Row="1" Background="Transparent" BorderThickness="0" Foreground="#BBC8D6" SelectionMode="Single" ScrollViewer.HorizontalScrollBarVisibility="Disabled" MouseDoubleClick="Playlist_DoubleClick" SelectionChanged="Playlist_SelectionChanged" AutomationProperties.Name="재생목록 파일">
+     <ListBox.ItemContainerStyle><Style TargetType="ListBoxItem"><Setter Property="HorizontalContentAlignment" Value="Stretch"/><Setter Property="Padding" Value="9,10"/><Setter Property="Margin" Value="0,1"/><Setter Property="ToolTip" Value="{Binding Path}"/><Setter Property="Template"><Setter.Value><ControlTemplate TargetType="ListBoxItem"><Border x:Name="ItemSurface" Background="Transparent" Padding="{TemplateBinding Padding}" CornerRadius="5"><ContentPresenter/></Border><ControlTemplate.Triggers><Trigger Property="IsMouseOver" Value="True"><Setter TargetName="ItemSurface" Property="Background" Value="#25313D"/></Trigger><Trigger Property="IsSelected" Value="True"><Setter TargetName="ItemSurface" Property="Background" Value="#324251"/></Trigger><DataTrigger Binding="{Binding IsCurrent}" Value="True"><Setter Property="Foreground" Value="#80DECB"/><Setter Property="FontWeight" Value="SemiBold"/></DataTrigger></ControlTemplate.Triggers></ControlTemplate></Setter.Value></Setter></Style></ListBox.ItemContainerStyle>
+     <ListBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding DisplayName}" TextTrimming="CharacterEllipsis"/></DataTemplate></ListBox.ItemTemplate>
+    </ListBox>
+    <TextBlock x:Name="PlaylistInfo" Grid.Row="2" Text="0개 파일" Foreground="#91A0B0" FontSize="11" Margin="4,12,4,7" TextWrapping="Wrap"/>
+    <WrapPanel Grid.Row="3" Orientation="Horizontal">
+     <Button x:Name="PlaylistPrevious" Content="▲" Width="34" Padding="5,9" Click="Previous_Click" ToolTip="이전 파일 (Page Up)"/>
+     <Button x:Name="PlaylistNext" Content="▼" Width="34" Padding="5,9" Click="Next_Click" ToolTip="다음 파일 (Page Down)"/>
+     <Button Content="추가" Padding="10,9" Click="PlaylistAdd_Click" ToolTip="목록 끝에 파일 추가"/>
+     <Button x:Name="PlaylistDelete" Content="삭제" Padding="10,9" IsEnabled="False" Click="PlaylistDelete_Click" ToolTip="선택한 항목을 목록에서 삭제"/>
+     <Button x:Name="PlaylistSort" Content="정렬" Padding="10,9" Click="PlaylistSort_Click"/>
+    </WrapPanel>
+   </Grid>
+  </Border>
  </Grid></Border>
 </Window>

@@ -10,11 +10,15 @@ if (!(Test-Path $dotnet)) { $dotnet = (Get-Command dotnet -ErrorAction Stop).Sou
 $inno = Join-Path $root '.tools\inno\ISCC.exe'
 if (!(Test-Path $inno)) { $inno = (Get-Command ISCC.exe -ErrorAction Stop).Source }
 if (!$SkipNative) { & "$PSScriptRoot\prepare-native.ps1" }
-& $dotnet publish src/LightMediaPlayer/LightMediaPlayer.csproj -c Release -r win-x64 --self-contained true -o artifacts/publish
+$version = ([xml](Get-Content src/LightMediaPlayer/LightMediaPlayer.csproj -Raw)).Project.PropertyGroup.Version
+$publish = Join-Path $root "artifacts/publish/v$version"
+$release = Join-Path $root "artifacts/release/v$version"
+& $dotnet publish src/LightMediaPlayer/LightMediaPlayer.csproj -c Release -r win-x64 --self-contained true -o $publish
 if ($LASTEXITCODE -ne 0) { throw 'Publish failed' }
-New-Item -ItemType Directory -Force artifacts/release | Out-Null
-Copy-Item artifacts/publish/LightMediaPlayer.exe artifacts/release/LightMediaPlayer-Portable-0.1.0.exe -Force
-& $inno /Q installer/LightMediaPlayer.iss
+New-Item -ItemType Directory -Force $release | Out-Null
+$portable = Join-Path $release "LightMediaPlayer-Portable-$version.exe"
+Copy-Item (Join-Path $publish 'LightMediaPlayer.exe') $portable -Force
+& $inno /Q "/DAppVersion=$version" "/DPublishDir=$publish" "/DReleaseDir=$release" installer/LightMediaPlayer.iss
 if ($LASTEXITCODE -ne 0) { throw 'Installer compilation failed' }
-Get-Item artifacts/release/LightMediaPlayer-Portable-0.1.0.exe,artifacts/release/LightMediaPlayer-Setup.exe | Get-FileHash -Algorithm SHA256 | ForEach-Object { "$($_.Hash.ToLowerInvariant())  $([IO.Path]::GetFileName($_.Path))" } | Set-Content artifacts/release/SHA256SUMS.txt
-Get-ChildItem artifacts/release | Select-Object Name,Length
+Get-Item $portable,(Join-Path $release 'LightMediaPlayer-Setup.exe') | Get-FileHash -Algorithm SHA256 | ForEach-Object { "$($_.Hash.ToLowerInvariant())  $([IO.Path]::GetFileName($_.Path))" } | Set-Content (Join-Path $release 'SHA256SUMS.txt')
+Get-ChildItem $release | Select-Object Name,Length
