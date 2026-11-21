@@ -27,7 +27,18 @@ public partial class MainWindow
         var subtitleTracks = CreateSubtitleTrackMenu(delayed: true);
         subtitles.Items.Add(openSubtitle); subtitles.Items.Add(toggleSubtitle); subtitles.Items.Add(subtitleTracks);
         menu.Items.Add(subtitles);
-        foreach (var title in new[] { "영상", "소리", "필터", "스킨", "화면 비율" })
+        menu.Items.Add(new MenuItem { Header = "영상", IsEnabled = false, ToolTip = "세부 메뉴 준비 중" });
+        var sound = new DelayedSubmenuItem { Header = "소리" };
+        var mute = new MenuItem { Header = "음소거", InputGestureText = "M", IsCheckable = true, IsChecked = _muted };
+        mute.Click += (_, _) => ToggleMute();
+        var volumeUp = new MenuItem { Header = "음량 높이기", InputGestureText = "↑", IsEnabled = VolumeBar.Value < 100 };
+        volumeUp.Click += (_, _) => ChangeVolume(5);
+        var volumeDown = new MenuItem { Header = "음량 낮추기", InputGestureText = "↓", IsEnabled = VolumeBar.Value > 0 };
+        volumeDown.Click += (_, _) => ChangeVolume(-5);
+        var audioTracks = CreateAudioTrackMenu(delayed: true);
+        sound.Items.Add(mute); sound.Items.Add(volumeUp); sound.Items.Add(volumeDown); sound.Items.Add(audioTracks);
+        menu.Items.Add(sound);
+        foreach (var title in new[] { "필터", "스킨", "화면 비율" })
             menu.Items.Add(new MenuItem { Header = title, IsEnabled = false, ToolTip = "세부 메뉴 준비 중" });
         var fullscreen = new MenuItem { Header = "전체 화면", IsCheckable = true, IsChecked = _fullscreen };
         fullscreen.Click += (_, _) => ToggleFullscreen();
@@ -35,7 +46,27 @@ public partial class MainWindow
         var settings = new MenuItem { Header = "환경 설정" };
         settings.Click += (_, _) => OpenSettings();
         menu.Items.Add(settings);
-        menu.Closed += (_, _) => { playback.Reset(); subtitles.Reset(); ((DelayedSubmenuItem)subtitleTracks).Reset(); };
+        menu.Closed += (_, _) =>
+        {
+            playback.Reset(); subtitles.Reset(); ((DelayedSubmenuItem)subtitleTracks).Reset();
+            sound.Reset(); ((DelayedSubmenuItem)audioTracks).Reset();
+        };
+        return menu;
+    }
+    private MenuItem CreateAudioTrackMenu(bool delayed = false)
+    {
+        MenuItem menu = delayed ? new DelayedSubmenuItem() : new MenuItem();
+        menu.Header = delayed ? "오디오 트랙 선택" : "오디오 트랙";
+        var generation = _generation;
+        var tracks = _player?.AudioTrackDescription.ToArray() ?? [];
+        menu.IsEnabled = tracks.Any(t => t.Id >= 0);
+        foreach (var track in tracks)
+        {
+            var id = track.Id;
+            var item = new MenuItem { Header = id == -1 ? "사용 안 함" : track.Name, IsCheckable = true, IsChecked = _player?.AudioTrack == id };
+            item.Click += (_, _) => { if (_generation == generation) _player?.SetAudioTrack(id); };
+            menu.Items.Add(item);
+        }
         return menu;
     }
     private MenuItem CreateSubtitleTrackMenu(bool delayed = false)

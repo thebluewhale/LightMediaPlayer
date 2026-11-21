@@ -1,4 +1,5 @@
 using System.IO;
+using System.Text;
 using System.Text.Json;
 using System.Windows;
 using LibVLCSharp.Shared;
@@ -64,6 +65,7 @@ public partial class MainWindow
             var tracks = _player.AudioTrackDescription.Where(t => t.Id >= 0).ToArray();
             if (tracks.Length >= 2) { _player.SetAudioTrack(tracks[1].Id); Check("audio_track_selection", await Until(() => _player!.AudioTrack == tracks[1].Id)); }
             else Check("audio_track_selection", false);
+            await RunSoundMenuTestsAsync(Check, Until);
             var sub = Path.ChangeExtension(file, ".srt");
             if (File.Exists(sub)) await LoadSubtitleAsync(sub);
             Check("subtitle_load", await Until(() => _player!.SpuDescription.Any(t => t.Id >= 0)));
@@ -84,6 +86,8 @@ public partial class MainWindow
             Check("original_aspect_ratio", _player.Scale == 0 && string.IsNullOrEmpty(_player.AspectRatio));
             await StopPlaybackAsync();
             Check("stop_releases_decoder", _player == null && _stopped && SeekBar.Value == 0);
+            var stoppedSound = (System.Windows.Controls.MenuItem)BuildVideoMenu().Items[3];
+            Check("sound_tracks_without_player_disabled", !((System.Windows.Controls.MenuItem)stoppedSound.Items[3]).IsEnabled && ((System.Windows.Controls.MenuItem)stoppedSound.Items[0]).IsEnabled);
             var stoppedSubtitles = (System.Windows.Controls.MenuItem)BuildVideoMenu().Items[1];
             Check("subtitle_menu_without_player_disabled", stoppedSubtitles.Items.Cast<System.Windows.Controls.MenuItem>().All(item => !item.IsEnabled));
             await TogglePlaybackAsync();
@@ -120,6 +124,13 @@ public partial class MainWindow
             var koreanSubtitle = Path.Combine(dir, "cp949.srt");
             var normalized = await NormalizeSubtitleAsync(koreanSubtitle);
             Check("korean_subtitle_encoding", (await File.ReadAllTextAsync(normalized)).Contains("한글 자막"));
+            using (var heldSubtitle = File.Open(normalized, FileMode.Open, FileAccess.Read, FileShare.Read))
+                Check("subtitle_cache_reused_while_in_use", await NormalizeSubtitleAsync(koreanSubtitle) == normalized);
+            var concurrentSubtitle = Path.Combine(Path.GetDirectoryName(report)!, $"concurrent-{Environment.ProcessId}.srt");
+            var subtitleText = $"1\n00:00:00,000 --> 00:00:01,000\n한글 {Guid.NewGuid():N}\n";
+            await File.WriteAllTextAsync(concurrentSubtitle, subtitleText, Encoding.Unicode);
+            var concurrentPaths = await Task.WhenAll(NormalizeSubtitleAsync(concurrentSubtitle), NormalizeSubtitleAsync(concurrentSubtitle));
+            Check("subtitle_cache_parallel_publish", concurrentPaths[0] == concurrentPaths[1] && await File.ReadAllTextAsync(concurrentPaths[0]) == subtitleText);
             await LoadSubtitleAsync(koreanSubtitle);
             Check("external_subtitle_attachment", _externalSubtitle == koreanSubtitle);
             var settingsPath = Path.Combine(Path.GetDirectoryName(report)!, $"settings-{Environment.ProcessId}.json");

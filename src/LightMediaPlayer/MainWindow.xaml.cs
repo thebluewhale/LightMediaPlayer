@@ -359,6 +359,7 @@ public partial class MainWindow : Window
     private void Volume_Changed(object sender, RoutedPropertyChangedEventArgs<double> e) { if (_player != null) _player.Volume = (int)e.NewValue; if (MuteButton != null) RefreshVolume(); if (_ready) ShowOsd($"{(int)e.NewValue}%"); }
     private void RefreshVolume() { MuteButton.Content = _muted || VolumeBar.Value == 0 ? "\uE74F" : "\uE767"; MuteButton.ToolTip = $"{(_muted ? "음소거 해제" : "음소거")} (M) · {(int)VolumeBar.Value}%"; VolumeBar.ToolTip = $"음량 {(int)VolumeBar.Value}%"; }
     private void ToggleMute() { _muted = !_muted; if (_player != null) _player.Mute = _muted; RefreshVolume(); ShowOsd(_muted ? "음소거 · 0%" : $"{(int)VolumeBar.Value}%"); }
+    private void ChangeVolume(int delta) => VolumeBar.Value = Math.Clamp(VolumeBar.Value + delta, 0, 100);
 
     private void OpenDialog()
     {
@@ -396,10 +397,22 @@ public partial class MainWindow : Window
         Directory.CreateDirectory(cache);
         var hash = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(bytes));
         var output = Path.Combine(cache, hash + Path.GetExtension(path));
-        // Separate process temp file followed by atomic move is safe during parallel opens.
-        var temporary = output + "." + Environment.ProcessId + ".tmp";
-        await File.WriteAllTextAsync(temporary, text, new UTF8Encoding(true));
-        File.Move(temporary, output, true);
+        // Content-addressed cache entries are immutable: a decoder may hold the
+        // destination open without delete sharing, so never replace an existing entry.
+        if (File.Exists(output)) return output;
+        var temporary = output + "." + Guid.NewGuid().ToString("N") + ".tmp";
+        try
+        {
+            await File.WriteAllTextAsync(temporary, text, new UTF8Encoding(true));
+            try { File.Move(temporary, output); }
+            catch (Exception ex) when ((ex is IOException or UnauthorizedAccessException) && File.Exists(output))
+            { /* Another conversion published the same complete content first. */ }
+        }
+        finally
+        {
+            try { File.Delete(temporary); }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { AppLog.Write("Subtitle cache cleanup: " + ex.Message); }
+        }
         return output;
     }
 
@@ -443,19 +456,8 @@ public partial class MainWindow : Window
         Add("자막 열기…    Ctrl+Shift+O", SubtitleDialog, _player != null);
         Add("자막 표시 / 숨김    V", ToggleSubtitles, _player != null);
         menu.Items.Add(new Separator());
-        var generation = _generation;
-        var audio = new MenuItem { Header = "오디오 트랙", IsEnabled = _player != null };
+        var audio = CreateAudioTrackMenu();
         var subtitles = CreateSubtitleTrackMenu();
-        if (_player != null)
-        {
-            foreach (var track in _player.AudioTrackDescription)
-            {
-                var id = track.Id;
-                var item = new MenuItem { Header = id == -1 ? "사용 안 함" : track.Name, IsCheckable = true, IsChecked = _player.AudioTrack == id };
-                item.Click += (_, _) => { if (_generation == generation) _player?.SetAudioTrack(id); };
-                audio.Items.Add(item);
-            }
-        }
         menu.Items.Add(audio); menu.Items.Add(subtitles);
         menu.Items.Add(new Separator());
         Add("전체화면 / 창 모드    Alt+Enter", ToggleFullscreen);
@@ -509,7 +511,7 @@ public partial class MainWindow : Window
         else if (key == Key.Space) await TogglePlaybackAsync();
         else if (key == Key.S) await StopPlaybackAsync();
         else if (key == Key.Left || key == Key.Right) SeekByKey(key == Key.Right ? 1 : -1, ctrl, shift);
-        else if (key == Key.Up || key == Key.Down) VolumeBar.Value = Math.Clamp(VolumeBar.Value + (key == Key.Up ? 5 : -5), 0, 100);
+        else if (key == Key.Up || key == Key.Down) ChangeVolume(key == Key.Up ? 5 : -5);
         else if (key == Key.M) ToggleMute();
         else if (key == Key.V) ToggleSubtitles();
         else if (key == Key.Home) SeekTo(0);
