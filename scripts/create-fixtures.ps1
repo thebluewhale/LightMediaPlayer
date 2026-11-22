@@ -9,6 +9,8 @@ $subtitle = "1`n00:00:00,000 --> 00:00:24,000`n한글 자막 테스트 · Light 
 [IO.File]::WriteAllText((Join-Path $dir '영상2.srt'), $subtitle, [Text.UTF8Encoding]::new($true))
 & $ffmpeg -hide_banner -loglevel error -y -f lavfi -i 'testsrc2=size=640x360:rate=24' -f lavfi -i 'sine=frequency=440:sample_rate=48000' -f lavfi -i 'sine=frequency=660:sample_rate=48000' -i (Join-Path $dir '영상2.srt') -map 0:v -map 1:a -map 2:a -map 3:s -t 24 -c:v libx264 -preset ultrafast -crf 26 -pix_fmt yuv420p -c:a aac -b:a 96k -af 'volume=0.1' -c:s srt -metadata:s:a:0 language=kor -metadata:s:a:1 language=eng -metadata:s:s:0 language=kor (Join-Path $dir '영상2.mkv')
 if ($LASTEXITCODE -ne 0) { throw 'MKV fixture generation failed' }
+& $ffmpeg -hide_banner -loglevel error -y -i (Join-Path $dir '영상2.mkv') -f lavfi -i 'color=red:size=320x180:rate=24' -map 0:v:0 -map 1:v:0 -map 0:a:0 -t 24 -c copy -c:v:1 libx264 -preset ultrafast -metadata:s:v:0 title=Pattern -metadata:s:v:1 title=Red (Join-Path $dir 'two-video-tracks.mkv')
+if ($LASTEXITCODE -ne 0) { throw 'Multi-video fixture generation failed' }
 & $ffmpeg -hide_banner -loglevel error -y -i (Join-Path $dir '영상2.mkv') -map 0:v -map 0:a -c copy (Join-Path $dir '영상10.mp4')
 if ($LASTEXITCODE -ne 0) { throw 'MP4 fixture generation failed' }
 Copy-Item (Join-Path $dir '영상2.srt') (Join-Path $dir '영상10.srt') -Force

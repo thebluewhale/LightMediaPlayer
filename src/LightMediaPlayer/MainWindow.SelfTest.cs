@@ -132,6 +132,7 @@ public partial class MainWindow
             Check("previous_file", Path.GetFileName(_path) == "영상2.mkv" && await Until(() => _player?.IsPlaying == true));
             await OpenPathAsync(Path.Combine(dir, "음악.flac"));
             Check("audio_only_playback", await Until(() => _player?.IsPlaying == true && EmptyTitle.Text == "음악 재생" && EmptyState.Visibility == Visibility.Visible));
+            await RunVideoTrackMenuTestsAsync(Path.Combine(dir, "two-video-tracks.mkv"), Check, Until);
             await OpenPathAsync(Path.Combine(dir, "sample.m3u"));
             Check("local_playlist_open", Path.GetFileName(_path) == "영상2.mkv" && _neighbors.Length == 2 && await Until(() => _player?.IsPlaying == true));
             var koreanSubtitle = Path.Combine(dir, "cp949.srt");

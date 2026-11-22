@@ -11,6 +11,49 @@ namespace LightMediaPlayer;
 
 public partial class MainWindow
 {
+    private async Task RunVideoTrackMenuTestsAsync(string file, Action<string, bool, object?> check, Func<Func<bool>, int, Task<bool>> until)
+    {
+        DelayedSubmenuItem TrackMenu(ContextMenu menu)
+        {
+            var video = menu.Items.OfType<DelayedSubmenuItem>().Single(item => Equals(item.Header, "영상"));
+            return (DelayedSubmenuItem)video.Items[0];
+        }
+        // Called while the audio-only fixture is playing.
+        check("video_menu_disabled_for_audio", !TrackMenu(BuildVideoMenu()).IsEnabled, null);
+        await OpenPathAsync(file);
+        if (!await until(() => _player?.IsPlaying == true && _player.VideoTrackDescription.Count(t => t.Id >= 0) == 2, 10000))
+        {
+            check("video_menu_two_tracks_available", false, file);
+            return;
+        }
+        var player = _player!;
+        var audio = player.AudioTrack;
+        var target = player.VideoTrackDescription.First(t => t.Id >= 0 && t.Id != player.VideoTrack);
+        var menu = BuildVideoMenu();
+        var tracks = TrackMenu(menu);
+        var video = (DelayedSubmenuItem)menu.Items[2];
+        menu.PlacementTarget = TracksButton;
+        menu.IsOpen = true;
+        try
+        {
+            await until(() => video.IsLoaded, 3000);
+            video.RaiseEvent(new MouseButtonEventArgs(Mouse.PrimaryDevice, Environment.TickCount, MouseButton.Left)
+                { RoutedEvent = PreviewMouseLeftButtonDownEvent, Source = video });
+            check("video_header_click_opens", video.IsSubmenuOpen && await until(() => tracks.IsLoaded, 3000), null);
+            tracks.IsSubmenuOpen = true;
+            check("video_tracks_block_early_open", !tracks.IsSubmenuOpen, null);
+            using var hover = new HoverIntent(tracks.OpenFromInput);
+            hover.Start();
+            check("video_tracks_delayed_open", await until(() => tracks.IsSubmenuOpen, 2000), null);
+            var item = tracks.Items.Cast<MenuItem>().Single(i => Equals(i.Header, target.Name));
+            item.RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));
+        }
+        finally { menu.IsOpen = false; }
+        check("video_menu_switches_native_track", await until(() => player.VideoTrack == target.Id && player.IsPlaying && player.AudioTrack == audio, 5000), target.Name);
+        var selected = TrackMenu(BuildVideoMenu()).Items.Cast<MenuItem>().Where(i => i.IsChecked).ToArray();
+        check("video_menu_marks_selected_track", selected.Length == 1 && Equals(selected[0].Header, target.Name), null);
+    }
+
     private async Task RunSubtitleMenuTestsAsync(Action<string, bool, object?> check, Func<Func<bool>, int, Task<bool>> until)
     {
         void Check(string name, bool ok) => check(name, ok, null);

@@ -27,7 +27,10 @@ public partial class MainWindow
         var subtitleTracks = CreateSubtitleTrackMenu(delayed: true);
         subtitles.Items.Add(openSubtitle); subtitles.Items.Add(toggleSubtitle); subtitles.Items.Add(subtitleTracks);
         menu.Items.Add(subtitles);
-        menu.Items.Add(new MenuItem { Header = "영상", IsEnabled = false, ToolTip = "세부 메뉴 준비 중" });
+        var video = new DelayedSubmenuItem { Header = "영상" };
+        var videoTracks = CreateVideoTrackMenu();
+        video.Items.Add(videoTracks);
+        menu.Items.Add(video);
         var sound = new DelayedSubmenuItem { Header = "소리" };
         var mute = new MenuItem { Header = "음소거", InputGestureText = "M", IsCheckable = true, IsChecked = _muted };
         mute.Click += (_, _) => ToggleMute();
@@ -49,10 +52,39 @@ public partial class MainWindow
         menu.Closed += (_, _) =>
         {
             playback.Reset(); subtitles.Reset(); ((DelayedSubmenuItem)subtitleTracks).Reset();
+            video.Reset();
+            videoTracks.Reset();
             sound.Reset(); ((DelayedSubmenuItem)audioTracks).Reset();
         };
         return menu;
     }
+    private DelayedSubmenuItem CreateVideoTrackMenu()
+    {
+        var menu = new DelayedSubmenuItem { Header = "비디오 트랙 선택" };
+        var player = _player;
+        var generation = _generation;
+        var tracks = player?.VideoTrackDescription.ToArray() ?? [];
+        menu.IsEnabled = tracks.Any(track => track.Id >= 0);
+        var selectedId = player?.VideoTrack;
+        foreach (var track in tracks)
+        {
+            var id = track.Id;
+            var item = new MenuItem
+            {
+                Header = id == -1 ? "사용 안 함" : track.Name,
+                IsCheckable = true,
+                IsChecked = selectedId == id
+            };
+            item.Click += (_, _) =>
+            {
+                if (generation == _generation && _player is { } current && !current.SetVideoTrack(id))
+                    SetStatus("비디오 트랙을 변경할 수 없습니다.", true);
+            };
+            menu.Items.Add(item);
+        }
+        return menu;
+    }
+
     private MenuItem CreateAudioTrackMenu(bool delayed = false)
     {
         MenuItem menu = delayed ? new DelayedSubmenuItem() : new MenuItem();
