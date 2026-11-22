@@ -24,6 +24,7 @@ public partial class MainWindow : Window
     private VlcPlayer? _player;
     private Media? _media;
     private LibVLCSharp.WPF.VideoView? _videoView;
+    private string _aspectRatio = string.Empty;
     private string? _path;
     private int _generation;
     private bool _ready, _closing, _canClose, _seeking, _stopped = true, _ended, _fullscreen, _software;
@@ -216,7 +217,8 @@ public partial class MainWindow : Window
             _videoView.MediaPlayer = current;
             current.Volume = (int)VolumeBar.Value;
             current.Mute = _muted;
-            current.Scale = 0; // Fit while preserving source aspect ratio; no crop or forced aspect ratio.
+            current.Scale = 0; // Fit the selected display ratio within the video surface.
+            current.AspectRatio = _aspectRatio;
             if (!current.Play(_media)) HandlePlaybackError(generation);
             UpdateButtons();
             AppLog.Write("OPEN " + path);

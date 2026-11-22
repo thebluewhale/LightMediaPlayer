@@ -11,6 +11,47 @@ namespace LightMediaPlayer;
 
 public partial class MainWindow
 {
+    private async Task RunAspectRatioMenuTestsAsync(Action<string, bool, object?> check, Func<Func<bool>, int, Task<bool>> until)
+    {
+        static DelayedSubmenuItem AspectMenu(ContextMenu menu) =>
+            menu.Items.OfType<DelayedSubmenuItem>().Single(item => Equals(item.Header, "화면 비율"));
+
+        var menu = BuildVideoMenu();
+        var ratios = AspectMenu(menu);
+        var items = ratios.Items.Cast<MenuItem>().ToArray();
+        check("aspect_ratio_choices", items.Select(item => (string)item.Header).SequenceEqual(new[] { "원본 비율", "16:9", "16:10", "4:3" }), null);
+        check("aspect_ratio_defaults_to_source", items.Single(item => item.IsChecked) == items[0], null);
+        menu.PlacementTarget = TracksButton;
+        menu.IsOpen = true;
+        try
+        {
+            await until(() => ratios.IsLoaded, 3000);
+            ratios.RaiseEvent(new MouseButtonEventArgs(Mouse.PrimaryDevice, Environment.TickCount, MouseButton.Left)
+                { RoutedEvent = PreviewMouseLeftButtonDownEvent, Source = ratios });
+            check("aspect_ratio_click_opens", ratios.IsSubmenuOpen, null);
+            ratios.Reset();
+            ratios.IsSubmenuOpen = true;
+            check("aspect_ratio_blocks_early_open", !ratios.IsSubmenuOpen, null);
+            using var hover = new HoverIntent(ratios.OpenFromInput);
+            hover.Start();
+            check("aspect_ratio_delayed_open", await until(() => ratios.IsSubmenuOpen, 2000), null);
+        }
+        finally { menu.IsOpen = false; }
+
+        var player = _player!;
+        foreach (var label in new[] { "16:9", "16:10", "4:3", "원본 비율" })
+        {
+            var item = AspectMenu(BuildVideoMenu()).Items.Cast<MenuItem>().Single(item => Equals(item.Header, label));
+            var pictures = _media!.Statistics.DisplayedPictures;
+            item.RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));
+            var expected = label == "원본 비율" ? string.Empty : label;
+            var applied = (player.AspectRatio ?? string.Empty) == expected && player.Scale == 0;
+            var playing = await until(() => player.IsPlaying && _media.Statistics.DisplayedPictures > pictures, 3000);
+            var checkedLabels = AspectMenu(BuildVideoMenu()).Items.Cast<MenuItem>().Where(i => i.IsChecked).Select(i => (string)i.Header);
+            check("aspect_ratio_playing_" + label, applied && playing && checkedLabels.SequenceEqual(new[] { label }), player.AspectRatio);
+        }
+    }
+
     private async Task RunVideoTrackMenuTestsAsync(string file, Action<string, bool, object?> check, Func<Func<bool>, int, Task<bool>> until)
     {
         DelayedSubmenuItem TrackMenu(ContextMenu menu)

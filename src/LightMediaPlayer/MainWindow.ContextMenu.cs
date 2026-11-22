@@ -41,8 +41,10 @@ public partial class MainWindow
         var audioTracks = CreateAudioTrackMenu(delayed: true);
         sound.Items.Add(mute); sound.Items.Add(volumeUp); sound.Items.Add(volumeDown); sound.Items.Add(audioTracks);
         menu.Items.Add(sound);
-        foreach (var title in new[] { "필터", "스킨", "화면 비율" })
+        foreach (var title in new[] { "필터", "스킨" })
             menu.Items.Add(new MenuItem { Header = title, IsEnabled = false, ToolTip = "세부 메뉴 준비 중" });
+        var aspectRatio = CreateAspectRatioMenu();
+        menu.Items.Add(aspectRatio);
         var fullscreen = new MenuItem { Header = "전체 화면", IsCheckable = true, IsChecked = _fullscreen };
         fullscreen.Click += (_, _) => ToggleFullscreen();
         menu.Items.Add(fullscreen);
@@ -55,9 +57,32 @@ public partial class MainWindow
             video.Reset();
             videoTracks.Reset();
             sound.Reset(); ((DelayedSubmenuItem)audioTracks).Reset();
+            aspectRatio.Reset();
         };
         return menu;
     }
+
+    private DelayedSubmenuItem CreateAspectRatioMenu()
+    {
+        var menu = new DelayedSubmenuItem { Header = "화면 비율" };
+        foreach (var ratio in new[] { string.Empty, "16:9", "16:10", "4:3" })
+        {
+            var item = new MenuItem
+            {
+                Header = ratio.Length == 0 ? "원본 비율" : ratio,
+                IsCheckable = true,
+                IsChecked = ratio == _aspectRatio
+            };
+            item.Click += (_, _) =>
+            {
+                _aspectRatio = ratio;
+                if (_player != null) _player.AspectRatio = ratio;
+            };
+            menu.Items.Add(item);
+        }
+        return menu;
+    }
+
     private DelayedSubmenuItem CreateVideoTrackMenu()
     {
         var menu = new DelayedSubmenuItem { Header = "비디오 트랙 선택" };

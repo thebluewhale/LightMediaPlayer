@@ -57,6 +57,7 @@ public partial class MainWindow
             Check("playback_clock_advances", _player.Time > prior);
             Check("video_frames_displayed", await Until(() => _media!.Statistics.DisplayedPictures > 0), _media!.Statistics.DisplayedPictures);
             Check("audio_decoded", _media.Statistics.DecodedAudio > 0, _media.Statistics.DecodedAudio);
+            await RunAspectRatioMenuTestsAsync(Check, Until);
             await TogglePlaybackAsync();
             Check("pause_state", await Until(() => _player!.State == VLCState.Paused));
             await Task.Delay(200);
