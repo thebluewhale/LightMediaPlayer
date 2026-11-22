@@ -1,6 +1,9 @@
 #define AppName "Light Media Player"
+; Separate the machine-wide handler from older per-user installations.
+#define RegisteredName "Light Media Player (x64)"
+#define MediaProgId "LightMediaPlayer.x64.Media"
 #ifndef AppVersion
-#define AppVersion "0.3.7"
+#define AppVersion "0.3.8"
 #endif
 #ifndef PublishDir
 #define PublishDir "..\artifacts\publish\v" + AppVersion
@@ -14,14 +17,16 @@ AppId={{E2B968A7-5672-4636-B35F-9787AC7D518A}
 AppName={#AppName}
 AppVersion={#AppVersion}
 AppPublisher=Light Media Player
-DefaultDirName={localappdata}\Programs\LightMediaPlayer
+DefaultDirName={commonpf32}\LightMediaPlayer
+UsePreviousAppDir=no
 DefaultGroupName={#AppName}
-PrivilegesRequired=lowest
+PrivilegesRequired=admin
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 OutputDir={#ReleaseDir}
 OutputBaseFilename=LightMediaPlayer-Setup
 SetupIconFile=..\src\LightMediaPlayer\Assets\player.ico
+UninstallDisplayName={#RegisteredName}
 UninstallDisplayIcon={app}\LightMediaPlayer.exe
 Compression=lzma2
 SolidCompression=yes
@@ -37,7 +42,6 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 
 [Tasks]
 Name: "desktopicon"; Description: "바탕 화면에 바로가기 만들기"; Flags: unchecked
-Name: "fileassoc"; Description: "미디어 파일의 연결 프로그램 후보로 등록 (기본 앱은 Windows 설정에서 선택)"
 
 [Files]
 Source: "{#PublishDir}\LightMediaPlayer.exe"; DestDir: "{app}"; Flags: ignoreversion
@@ -48,14 +52,15 @@ Name: "{group}\{#AppName}"; Filename: "{app}\LightMediaPlayer.exe"
 Name: "{autodesktop}\{#AppName}"; Filename: "{app}\LightMediaPlayer.exe"; Tasks: desktopicon
 
 [Registry]
-Root: HKCU; Subkey: "Software\Classes\LightMediaPlayer.Media"; ValueType: string; ValueData: "Light Media Player 미디어"; Flags: uninsdeletekey; Tasks: fileassoc
-Root: HKCU; Subkey: "Software\Classes\LightMediaPlayer.Media\DefaultIcon"; ValueType: string; ValueData: """{app}\LightMediaPlayer.exe"",0"; Tasks: fileassoc
-Root: HKCU; Subkey: "Software\Classes\LightMediaPlayer.Media\shell\open\command"; ValueType: string; ValueData: """{app}\LightMediaPlayer.exe"" ""%1"""; Tasks: fileassoc
-Root: HKCU; Subkey: "Software\Classes\Applications\LightMediaPlayer.exe"; ValueType: string; ValueName: "FriendlyAppName"; ValueData: "{#AppName}"; Flags: uninsdeletekey; Tasks: fileassoc
-Root: HKCU; Subkey: "Software\Classes\Applications\LightMediaPlayer.exe\shell\open\command"; ValueType: string; ValueData: """{app}\LightMediaPlayer.exe"" ""%1"""; Tasks: fileassoc
-Root: HKCU; Subkey: "Software\LightMediaPlayer\Capabilities"; ValueType: string; ValueName: "ApplicationName"; ValueData: "{#AppName}"; Flags: uninsdeletekey; Tasks: fileassoc
-Root: HKCU; Subkey: "Software\LightMediaPlayer\Capabilities"; ValueType: string; ValueName: "ApplicationDescription"; ValueData: "가벼운 동영상 및 음악 플레이어"; Tasks: fileassoc
-Root: HKCU; Subkey: "Software\RegisteredApplications"; ValueType: string; ValueName: "Light Media Player"; ValueData: "Software\LightMediaPlayer\Capabilities"; Flags: uninsdeletevalue; Tasks: fileassoc
+Root: HKLM; Subkey: "Software\Classes\{#MediaProgId}"; ValueType: string; ValueData: "Light Media Player 미디어"; Flags: uninsdeletekey
+Root: HKLM; Subkey: "Software\Classes\{#MediaProgId}\DefaultIcon"; ValueType: string; ValueData: """{app}\LightMediaPlayer.exe"",0"
+Root: HKLM; Subkey: "Software\Classes\{#MediaProgId}\shell\open\command"; ValueType: string; ValueData: """{app}\LightMediaPlayer.exe"" ""%1"""
+Root: HKLM; Subkey: "Software\Classes\Applications\LightMediaPlayer.exe"; ValueType: string; ValueName: "FriendlyAppName"; ValueData: "{#AppName}"; Flags: uninsdeletekey
+Root: HKLM; Subkey: "Software\Classes\Applications\LightMediaPlayer.exe\shell\open\command"; ValueType: string; ValueData: """{app}\LightMediaPlayer.exe"" ""%1"""
+Root: HKLM; Subkey: "Software\LightMediaPlayer\Capabilities"; ValueType: string; ValueName: "ApplicationName"; ValueData: "{#RegisteredName}"; Flags: uninsdeletekey
+Root: HKLM; Subkey: "Software\LightMediaPlayer\Capabilities"; ValueType: string; ValueName: "ApplicationIcon"; ValueData: """{app}\LightMediaPlayer.exe"",0"
+Root: HKLM; Subkey: "Software\LightMediaPlayer\Capabilities"; ValueType: string; ValueName: "ApplicationDescription"; ValueData: "가벼운 동영상 및 음악 플레이어"
+Root: HKLM; Subkey: "Software\RegisteredApplications"; ValueType: string; ValueName: "{#RegisteredName}"; ValueData: "Software\LightMediaPlayer\Capabilities"; Flags: uninsdeletevalue
 #include "associations.iss"
 
 [Run]

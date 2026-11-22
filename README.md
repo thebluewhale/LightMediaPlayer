@@ -6,13 +6,15 @@ Windows x64용 동영상·음악 플레이어 POC. C# / WPF / .NET 10 / LibVLCSh
 
 [GitHub Releases](https://github.com/thebluewhale/LightMediaPlayer/releases)에서 받습니다.
 
-- `LightMediaPlayer-Portable-0.3.7.exe`: 설치 없이 실행하는 단일 EXE. .NET이나 VLC를 따로 설치할 필요가 없습니다.
-- `LightMediaPlayer-Setup.exe`: 현재 사용자용 설치 프로그램. 관리자 권한 없이 설치하고 제거할 수 있습니다.
+- `LightMediaPlayer-Portable-0.3.8.exe`: 설치 없이 실행하는 단일 EXE. .NET이나 VLC를 따로 설치할 필요가 없습니다.
+- `LightMediaPlayer-Setup.exe`는 관리자 권한으로 모든 사용자용 플레이어를 설치합니다. 기본 설치 폴더는 `C:\Program Files (x86)\LightMediaPlayer`입니다.
 - `SHA256SUMS.txt`: 배포 파일의 SHA-256 체크섬.
 
 포터블은 실행 시 포함된 네이티브 라이브러리를 사용자 캐시에 추출합니다. 실행 파일 하나만 이동해 사용할 수 있지만, 실행 후 캐시·설정·로그가 사용자 프로필에 남습니다. 파일 추출이 전혀 없는 EXE나 설정까지 USB에 보관하는 방식은 아닙니다.
 
-설치본은 파일의 **연결 프로그램 후보**로 등록할 수 있습니다. Windows 설정 → 앱 → 기본 앱에서 Light Media Player를 선택하거나 탐색기의 **연결 프로그램**으로 지정하면 더블클릭으로 실행됩니다. 기존 기본 앱을 강제로 변경하지 않습니다.
+설치하면 **설정 → 앱 → 기본 앱**에 **Light Media Player (x64)** 가 후보로 등록됩니다. 원하는 확장자(예: `.mp4` 또는 `.mkv`)를 선택하고 기본 앱으로 지정하면 해당 파일을 더블클릭해 재생할 수 있습니다.
+
+AppData에 설치된 기존 사용자용 설치본은 **설정 → 앱 → 설치된 앱**에 **Light Media Player 버전 …** 또는 **Light Media Player**로 표시됩니다. 새 설치본은 **Light Media Player (x64)** 로 구분되므로, 새 버전으로 전환한 뒤 기존 설치본만 선택해 제거할 수 있습니다.
 
 ## 구현된 기능
 
