@@ -1,6 +1,6 @@
 #define AppName "Light Media Player"
 #ifndef AppVersion
-#define AppVersion "0.3.6"
+#define AppVersion "0.3.7"
 #endif
 #ifndef PublishDir
 #define PublishDir "..\artifacts\publish\v" + AppVersion

@@ -10,7 +10,8 @@
    <StackPanel x:Name="TitleButtons" Grid.Column="2" Orientation="Horizontal"><Button Content="&#xE921;" FontFamily="Segoe MDL2 Assets" Width="46" ToolTip="최소화" AutomationProperties.Name="최소화" Click="Minimize_Click"/><Button x:Name="MaximizeButton" Content="&#xE922;" FontFamily="Segoe MDL2 Assets" Width="46" ToolTip="최대화 / 복원" AutomationProperties.Name="최대화" Click="Maximize_Click"/><Button Content="&#xE8BB;" FontFamily="Segoe MDL2 Assets" Width="46" ToolTip="종료" AutomationProperties.Name="종료" Click="Close_Click"/></StackPanel>
   </Grid>
   <Grid x:Name="VideoSurface" Grid.Row="1" Background="Black">
-    <Grid x:Name="VideoOverlay" Background="Transparent" MouseLeftButtonDown="Video_MouseLeftButtonDown" MouseRightButtonUp="Video_MouseRightButtonUp" AllowDrop="True" DragOver="Window_DragOver" Drop="Window_Drop">
+    <!-- A zero-alpha pixel in the layered video overlay passes mouse input through to the native video window. -->
+    <Grid x:Name="VideoOverlay" Background="#01000000" MouseLeftButtonDown="Video_MouseLeftButtonDown" MouseRightButtonUp="Video_MouseRightButtonUp" AllowDrop="True" DragOver="Window_DragOver" Drop="Window_Drop">
      <StackPanel x:Name="EmptyState" VerticalAlignment="Center" HorizontalAlignment="Center" MaxWidth="540">
       <Border Width="68" Height="68" CornerRadius="22" Background="#182C2B" HorizontalAlignment="Center" Margin="0,0,0,22"><TextBlock Text="▶" Foreground="{StaticResource Accent}" FontSize="28" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="4,0,0,0"/></Border>
       <TextBlock x:Name="EmptyTitle" Text="가볍게 열고, 편하게 감상하세요" FontSize="23" FontWeight="SemiBold" TextAlignment="Center" Foreground="#E8EDF3"/>

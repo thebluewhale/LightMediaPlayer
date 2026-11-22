@@ -109,6 +109,7 @@ public partial class MainWindow
             Check("restart_position", _player!.Time < 4000);
             await OpenPathAsync(file, software: true, resume: 6000);
             Check("software_decode_reopen", await Until(() => _player?.IsPlaying == true && _player.Time >= 5500), _player?.Time);
+            await RunFilterMenuTestsAsync(report, Check, Until);
             var original = _path;
             await OpenPathAsync(Path.Combine(Path.GetDirectoryName(file)!, "does-not-exist.mp4"));
             Check("missing_file_keeps_current_playback", _path == original && _player!.IsPlaying && StatusText.Text.Contains("찾을 수"));

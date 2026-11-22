@@ -5,12 +5,76 @@ using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Media.Imaging;
 using LibVLCSharp.Shared;
 
 namespace LightMediaPlayer;
 
 public partial class MainWindow
 {
+    private async Task RunFilterMenuTestsAsync(string report, Action<string, bool, object?> check, Func<Func<bool>, int, Task<bool>> until)
+    {
+        static DelayedSubmenuItem Filters(ContextMenu menu) =>
+            menu.Items.OfType<DelayedSubmenuItem>().Single(item => Equals(item.Header, "필터"));
+
+        var menu = BuildVideoMenu();
+        var filters = Filters(menu);
+        var items = filters.Items.Cast<MenuItem>().ToArray();
+        check("filter_choices", items.Select(i => (string)i.Header).SequenceEqual(new[] { "필터 없음", "채도 낮추기", "채도 높이기", "밝기 높이기" }), null);
+        check("filter_defaults_to_original", items.Single(i => i.IsChecked) == items[0], null);
+        menu.PlacementTarget = TracksButton;
+        menu.IsOpen = true;
+        try
+        {
+            await until(() => filters.IsLoaded, 3000);
+            filters.RaiseEvent(new MouseButtonEventArgs(Mouse.PrimaryDevice, Environment.TickCount, MouseButton.Left)
+                { RoutedEvent = PreviewMouseLeftButtonDownEvent, Source = filters });
+            check("filter_click_opens", filters.IsSubmenuOpen, null);
+            filters.Reset();
+            filters.IsSubmenuOpen = true;
+            check("filter_blocks_early_open", !filters.IsSubmenuOpen, null);
+            using var hover = new HoverIntent(filters.OpenFromInput);
+            hover.Start();
+            check("filter_delayed_open", await until(() => filters.IsSubmenuOpen, 2000), null);
+        }
+        finally { menu.IsOpen = false; }
+
+        var directory = Path.Combine(Path.GetDirectoryName(report)!, "visuals");
+        Directory.CreateDirectory(directory);
+        var player = _player!;
+        var audio = player.AudioTrack;
+        foreach (var label in new[] { "채도 낮추기", "채도 높이기", "밝기 높이기", "필터 없음" })
+        {
+            var pictures = _media!.Statistics.DisplayedPictures;
+            items.Single(i => Equals(i.Header, label)).RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));
+            var advancing = await until(() => _media.Statistics.DisplayedPictures >= pictures + 4, 3000);
+            var selected = Filters(BuildVideoMenu()).Items.Cast<MenuItem>().Where(i => i.IsChecked).Select(i => (string)i.Header);
+            check("filter_live_" + label, advancing && player == _player && player.IsPlaying && player.AudioTrack == audio
+                && selected.SequenceEqual(new[] { label }), null);
+            var path = Path.Combine(directory, $"filter-{Environment.ProcessId}-{label}.png");
+            if (!player.TakeSnapshot(0, path, 320, 0) || !await until(() => File.Exists(path), 3000))
+            {
+                check("filter_snapshot_" + label, false, path);
+                continue;
+            }
+            // The fixture has a solid red bar here. Compare a decoded pixel so a
+            // successful API call or an unreadable GPU snapshot cannot pass alone.
+            using var stream = File.OpenRead(path);
+            var frame = BitmapFrame.Create(stream, BitmapCreateOptions.None, BitmapCacheOption.OnLoad);
+            var rgb = new FormatConvertedBitmap(frame, PixelFormats.Rgb24, null, 0);
+            var pixel = new byte[3];
+            rgb.CopyPixels(new Int32Rect(20, 100, 1, 1), pixel, 3, 0);
+            var matches = label switch
+            {
+                "채도 낮추기" => pixel[0] - pixel[1] is > 30 and < 150 && Math.Abs(pixel[1] - pixel[2]) < 10,
+                "밝기 높이기" => pixel[0] > 230 && pixel[1] > 25 && pixel[2] > 25,
+                _ => pixel[0] > 230 && pixel[1] < 15 && pixel[2] < 15
+            };
+            var saturation = player.AdjustFloat(VideoAdjustOption.Saturation);
+            check("filter_snapshot_" + label, matches && (label != "채도 높이기" || saturation > 1), new { pixel = pixel.Select(b => (int)b).ToArray(), path });
+        }
+    }
+
     private async Task RunAspectRatioMenuTestsAsync(Action<string, bool, object?> check, Func<Func<bool>, int, Task<bool>> until)
     {
         static DelayedSubmenuItem AspectMenu(ContextMenu menu) =>

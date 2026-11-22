@@ -219,6 +219,7 @@ public partial class MainWindow : Window
             current.Mute = _muted;
             current.Scale = 0; // Fit the selected display ratio within the video surface.
             current.AspectRatio = _aspectRatio;
+            if (_videoFilter != NoFilter) ApplyVideoFilter(current);
             if (!current.Play(_media)) HandlePlaybackError(generation);
             UpdateButtons();
             AppLog.Write("OPEN " + path);

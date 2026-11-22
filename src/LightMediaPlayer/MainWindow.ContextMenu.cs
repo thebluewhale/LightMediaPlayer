@@ -1,9 +1,16 @@
 using System.Windows.Controls;
+using LibVLCSharp.Shared;
 
 namespace LightMediaPlayer;
 
 public partial class MainWindow
 {
+    private sealed record VideoFilter(string Label, float Saturation = 1f, float Brightness = 1f);
+    private static readonly VideoFilter NoFilter = new("필터 없음");
+    private static readonly VideoFilter[] VideoFilters =
+        [NoFilter, new("채도 낮추기", Saturation: 0.35f), new("채도 높이기", Saturation: 1.5f), new("밝기 높이기", Brightness: 1.2f)];
+    private VideoFilter _videoFilter = NoFilter;
+
     private ContextMenu BuildVideoMenu()
     {
         var menu = new ContextMenu();
@@ -41,8 +48,9 @@ public partial class MainWindow
         var audioTracks = CreateAudioTrackMenu(delayed: true);
         sound.Items.Add(mute); sound.Items.Add(volumeUp); sound.Items.Add(volumeDown); sound.Items.Add(audioTracks);
         menu.Items.Add(sound);
-        foreach (var title in new[] { "필터", "스킨" })
-            menu.Items.Add(new MenuItem { Header = title, IsEnabled = false, ToolTip = "세부 메뉴 준비 중" });
+        var filters = CreateFilterMenu();
+        menu.Items.Add(filters);
+        menu.Items.Add(new MenuItem { Header = "스킨", IsEnabled = false, ToolTip = "세부 메뉴 준비 중" });
         var aspectRatio = CreateAspectRatioMenu();
         menu.Items.Add(aspectRatio);
         var fullscreen = new MenuItem { Header = "전체 화면", IsCheckable = true, IsChecked = _fullscreen };
@@ -57,9 +65,38 @@ public partial class MainWindow
             video.Reset();
             videoTracks.Reset();
             sound.Reset(); ((DelayedSubmenuItem)audioTracks).Reset();
+            filters.Reset();
             aspectRatio.Reset();
         };
         return menu;
+    }
+
+    private DelayedSubmenuItem CreateFilterMenu()
+    {
+        var menu = new DelayedSubmenuItem { Header = "필터" };
+        foreach (var filter in VideoFilters)
+        {
+            var item = new MenuItem { Header = filter.Label, IsCheckable = true, IsChecked = filter == _videoFilter };
+            item.Click += (_, _) =>
+            {
+                _videoFilter = filter;
+                if (_player != null) ApplyVideoFilter(_player);
+            };
+            menu.Items.Add(item);
+        }
+        return menu;
+    }
+
+    private void ApplyVideoFilter(MediaPlayer player)
+    {
+        if (_videoFilter == NoFilter)
+        {
+            player.SetAdjustInt(VideoAdjustOption.Enable, 0);
+            return;
+        }
+        player.SetAdjustFloat(VideoAdjustOption.Saturation, _videoFilter.Saturation);
+        player.SetAdjustFloat(VideoAdjustOption.Brightness, _videoFilter.Brightness);
+        player.SetAdjustInt(VideoAdjustOption.Enable, 1);
     }
 
     private DelayedSubmenuItem CreateAspectRatioMenu()
