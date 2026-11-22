@@ -6,7 +6,7 @@ Windows x64용 동영상·음악 플레이어 POC. C# / WPF / .NET 10 / LibVLCSh
 
 [GitHub Releases](https://github.com/thebluewhale/LightMediaPlayer/releases)에서 받습니다.
 
-- `LightMediaPlayer-Portable-0.3.3.exe`: 설치 없이 실행하는 단일 EXE. .NET이나 VLC를 따로 설치할 필요가 없습니다.
+- `LightMediaPlayer-Portable-0.3.4.exe`: 설치 없이 실행하는 단일 EXE. .NET이나 VLC를 따로 설치할 필요가 없습니다.
 - `LightMediaPlayer-Setup.exe`: 현재 사용자용 설치 프로그램. 관리자 권한 없이 설치하고 제거할 수 있습니다.
 - `SHA256SUMS.txt`: 배포 파일의 SHA-256 체크섬.
 

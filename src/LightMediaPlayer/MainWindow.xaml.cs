@@ -23,6 +23,7 @@ public partial class MainWindow : Window
     private LibVLC? _vlc;
     private VlcPlayer? _player;
     private Media? _media;
+    private LibVLCSharp.WPF.VideoView? _videoView;
     private string? _path;
     private int _generation;
     private bool _ready, _closing, _canClose, _seeking, _stopped = true, _ended, _fullscreen, _software;
@@ -203,7 +204,16 @@ public partial class MainWindow : Window
                 _ended = true; SetStatus("재생 완료"); UpdateButtons(); AppLog.Write("ENDED");
             });
             current.EncounteredError += (_, _) => Post(generation, () => HandlePlaybackError(generation));
-            Video.MediaPlayer = current;
+            if (_videoView == null)
+            {
+                // The native video host paints its system background before it has
+                // video. Keep the welcome screen in the main WPF window until now.
+                VideoSurface.Children.Remove(VideoOverlay);
+                _videoView = new LibVLCSharp.WPF.VideoView { Content = VideoOverlay };
+                VideoSurface.Children.Add(_videoView);
+                VideoSurface.UpdateLayout();
+            }
+            _videoView.MediaPlayer = current;
             current.Volume = (int)VolumeBar.Value;
             current.Mute = _muted;
             current.Scale = 0; // Fit while preserving source aspect ratio; no crop or forced aspect ratio.
@@ -248,7 +258,7 @@ public partial class MainWindow : Window
 
     private async Task ReleasePlayerAsync()
     {
-        Video.MediaPlayer = null;
+        if (_videoView != null) _videoView.MediaPlayer = null;
         var player = _player;
         var media = _media;
         _player = null;

@@ -3,6 +3,8 @@ using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Windows;
 using System.Windows.Interop;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
 
 namespace LightMediaPlayer;
 
@@ -20,8 +22,10 @@ public partial class MainWindow
         var hwnd = new WindowInteropHelper(this).Handle;
         var source = HwndSource.FromHwnd(hwnd);
         var hiddenTransitions = 0;
+        var staticBrushRequests = 0;
         nint Observe(nint handle, int message, nint wParam, nint lParam, ref bool handled)
         {
+            if (message == 0x0138) staticBrushRequests++; // WM_CTLCOLORSTATIC
             if (message == 0x007D && wParam == -16 && lParam != 0)
             {
                 var styles = Marshal.PtrToStructure<ResizeProbeNative.StyleChange>(lParam);
@@ -32,9 +36,38 @@ public partial class MainWindow
         source.AddHook(Observe);
         try
         {
+            WindowState = WindowState.Normal;
+            var originalSize = new Size(Width, Height);
+            var blackSamples = 0;
+            var idleWithoutHost = true;
+            ResizeProbeNative.SendMessage(hwnd, 0x0231, 0, 0);
+            try
+            {
+                for (var i = 0; i < 80; i++)
+                {
+                    var d = Math.Min(i % 20, 20 - i % 20) * 9;
+                    Width = 880 + d;
+                    Height = 570 + d;
+                    await Task.Delay(16);
+                    idleWithoutHost &= _player == null && _path == null && Window.GetWindow(VideoOverlay) == this &&
+                        EmptyOpenButton.IsVisible && ResizeProbeNative.FindWindowEx(hwnd, 0, "Static", null) == 0;
+                    if (HasBlackIdleBackground()) blackSamples++;
+                }
+            }
+            finally
+            {
+                ResizeProbeNative.SendMessage(hwnd, 0x0232, 0, 0);
+                Width = originalSize.Width;
+                Height = originalSize.Height;
+            }
+            Check("idle_resize_without_native_video_host", idleWithoutHost);
+            Check("idle_resize_no_static_brush_requests", staticBrushRequests == 0, staticBrushRequests);
+            Check("idle_resize_background_black", blackSamples == 80, blackSamples);
             await OpenPathAsync(_arguments[index + 2]);
             for (var attempt = 0; attempt < 100 && _player?.IsPlaying != true; attempt++) await Task.Delay(100);
             Check("resize_playback_started", _player?.IsPlaying == true);
+            Check("first_playback_attaches_video_host", _player?.Hwnd is nint output && output != 0 &&
+                ResizeProbeNative.IsChild(hwnd, output) && Window.GetWindow(VideoOverlay)?.Owner == this);
             WindowState = WindowState.Normal;
             await Task.Delay(200);
             ResizeProbeNative.GetWindowRect(hwnd, out var original);
@@ -138,10 +171,25 @@ public partial class MainWindow
         await File.WriteAllTextAsync(report, JsonSerializer.Serialize(new { processId = Environment.ProcessId, passed, checks }, new JsonSerializerOptions { WriteIndented = true }));
         Close();
     }
+    private bool HasBlackIdleBackground()
+    {
+        // Render this window's video area. Sample all four corners, clear of the welcome text.
+        var drawing = new DrawingVisual();
+        using (var context = drawing.RenderOpen())
+            context.DrawRectangle(new VisualBrush(VideoSurface), null, new Rect(0, 0, 64, 64));
+        var bitmap = new RenderTargetBitmap(64, 64, 96, 96, PixelFormats.Pbgra32);
+        bitmap.Render(drawing);
+        var pixels = new int[64 * 64];
+        bitmap.CopyPixels(pixels, 64 * 4, 0);
+        const int black = unchecked((int)0xff000000);
+        return pixels[65] == black && pixels[126] == black && pixels[3969] == black && pixels[4030] == black;
+    }
 }
 
 internal static class ResizeProbeNative
 {
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)] internal static extern nint FindWindowEx(nint parent, nint after, string className, string? name);
+    [DllImport("user32.dll")] internal static extern bool IsChild(nint parent, nint child);
     [StructLayout(LayoutKind.Sequential)] internal struct StyleChange { public uint Old, New; }
     [StructLayout(LayoutKind.Sequential)] internal struct Rect { public int Left, Top, Right, Bottom; }
     [DllImport("user32.dll")] internal static extern bool GetWindowRect(nint hwnd, out Rect rect);
