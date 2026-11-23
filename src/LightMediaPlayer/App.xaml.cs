@@ -20,7 +20,8 @@ public partial class App : Application
         if (e.Args.FirstOrDefault() == "--shell-open")
         {
             _explorer = new ExplorerOpenServer();
-            _explorer.Start(paths => Dispatcher.InvokeAsync(() => ShowPlayer(paths)));
+            // Show and activate on the STA during Explorer's Open call.
+            _explorer.Start(paths => Dispatcher.Invoke(() => ShowPlayer(paths)));
             return;
         }
         ShowPlayer(e.Args);
@@ -31,6 +32,7 @@ public partial class App : Application
         var window = new MainWindow(paths);
         MainWindow = window;
         window.Show();
+        if (window.Activate()) window.Focus();
     }
 
     protected override void OnExit(ExitEventArgs e)

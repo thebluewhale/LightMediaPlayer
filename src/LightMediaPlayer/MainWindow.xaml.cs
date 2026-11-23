@@ -207,10 +207,13 @@ public partial class MainWindow : Window
             current.Playing += (_, _) => Post(generation, OnPlaying);
             current.Paused += (_, _) => Post(generation, () => { SetStatus("일시정지"); ShowOsd("일시정지 · " + FormatOsdTime(current.Time)); UpdateButtons(); });
             current.Stopped += (_, _) => Post(generation, () => { _stopped = true; UpdateButtons(); });
-            current.EndReached += (_, _) => Post(generation, () =>
+            current.EndReached += (_, _) => Post(generation, async () =>
             {
                 if (!_hasPlayableStreams && !HasPlayableStreams()) { HandlePlaybackError(generation); return; }
                 _ended = true; SetStatus("재생 완료"); UpdateButtons(); AppLog.Write("ENDED");
+                // Use the live order, including the former slot of a removed playing row.
+                if (_queue.Count > 0 && (_queue.Count > 1 || _queue[0] != _currentEntry))
+                    await PlayEntryAsync(_queue[NavigationTarget(1) % _queue.Count]);
             });
             current.EncounteredError += (_, _) => Post(generation, () => HandlePlaybackError(generation));
             if (_videoView == null)

@@ -143,6 +143,20 @@ public partial class MainWindow
             var selection = new[] { Path.Combine(dir, "영상10.mp4"), Path.Combine(dir, "음악.flac"), Path.Combine(dir, "영상2.mkv") };
             await OpenFilesAsync(selection);
             Check("selection_plays_first_and_queues_in_order", _path == selection[0] && _neighbors.SequenceEqual(selection) && await Until(() => _player?.IsPlaying == true));
+            foreach (var next in new[] { 1, 2, 0 })
+            {
+                // Let the 24-second FLAC run to its natural end; its demuxer may
+                // accept a near-EOF seek without reaching the last audio frames.
+                if (_path != selection[1])
+                {
+                    await Until(() => _player?.IsSeekable == true && _player.Time > 200 && _player.Length > 1000);
+                    SeekTo(_player!.Length - 750);
+                }
+                var advanced = await Until(() => _currentEntry == _queue[next] && _path == selection[next] &&
+                    _player?.IsPlaying == true, next == 2 ? 35000 : 7000);
+                Check($"playlist_eof_advances_to_index_{next}", advanced, _path);
+                if (!advanced) break;
+            }
             ReplaceQueue([]);
             await OpenPathAsync(Path.Combine(dir, "영상2.mkv"));
             await Until(() => _player?.IsPlaying == true);
