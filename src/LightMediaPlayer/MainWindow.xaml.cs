@@ -45,6 +45,15 @@ public partial class MainWindow : Window
         PlaylistList.ItemsSource = _queue;
         SizeChanged += (_, _) => { if (_playlistOpen && !_fullscreen) UpdatePlaylistLayout(); };
         _osdTimer.Tick += (_, _) => { OsdBubble.Visibility = Visibility.Collapsed; _osdTimer.Stop(); };
+        _pointerIdle.Tick += (_, _) =>
+        {
+            _pointerIdle.Stop();
+            if (_fullscreen && VideoOverlay.IsMouseOver)
+            {
+                VideoOverlay.Cursor = Cursors.None;
+                VideoOverlay.ForceCursor = true;
+            }
+        };
         SourceInitialized += (_, _) =>
         {
             _frame = new PlayerWindowFrame(this, TitleBar, TitleButtons, () => _fullscreen);
@@ -354,17 +363,21 @@ public partial class MainWindow : Window
         if (next >= 0 && next < _queue.Count) await PlayEntryAsync(_queue[next]);
     }
 
-    private void SeekTo(long position)
+    private void SeekTo(long position, bool keyboardSeek = false)
     {
         if (_player?.IsSeekable == true && !_stopped && !_ended)
         {
             var before = EffectiveSeekTime();
-            var target = Math.Clamp(position, 0, Math.Max(0, _player.Length - 1));
+            var duration = _player.Length;
+            var target = Math.Clamp(position, 0, Math.Max(0, duration - 1));
             _player.Time = target;
             _seekTarget = target;
             _seekRequestedAt = Environment.TickCount64;
             var delta = target - before;
-            ShowOsd($"{Math.Abs(delta) / 1000:0}초 {(delta >= 0 ? "앞으로" : "뒤로")}, {FormatOsdTime(target)}");
+            var progress = duration > 0 ? $", ({Math.Round(100d * target / duration, MidpointRounding.AwayFromZero)}%)" : string.Empty;
+            ShowOsd($"{Math.Abs(delta) / 1000:0}초 {(delta >= 0 ? "앞으로" : "뒤로")}, {FormatOsdTime(target)}{progress}");
+            if (keyboardSeek && _fullscreen && !ControlsEdge.IsMouseOver && duration > 0)
+                ShowFullscreenSeek((double)target / duration);
         }
     }
     private void SeekAt(MouseEventArgs e)
@@ -506,7 +519,7 @@ public partial class MainWindow : Window
             UpdatePlaylistLayout();
             WindowState = WindowState.Normal;
             ResizeMode = ResizeMode.NoResize;
-            TitleBar.Visibility = Visibility.Collapsed;
+            SetFullscreenBars(true);
             WindowState = WindowState.Maximized;
         }
         else
@@ -514,7 +527,7 @@ public partial class MainWindow : Window
             _fullscreen = false;
             WindowState = WindowState.Normal;
             ResizeMode = ResizeMode.CanResize;
-            TitleBar.Visibility = Visibility.Visible;
+            SetFullscreenBars(false);
             Left = _normalBounds.Left; Top = _normalBounds.Top; Width = _normalBounds.Width; Height = _normalBounds.Height;
             WindowState = _beforeFullscreen;
             PlaylistToggle.Visibility = Visibility.Visible;
@@ -577,6 +590,7 @@ public partial class MainWindow : Window
         _closing = true;
         _timer.Stop();
         _osdTimer.Stop();
+        ResetFullscreenPointer();
         _magnet?.Dispose();
         _frame?.Dispose();
         CancelSorting();

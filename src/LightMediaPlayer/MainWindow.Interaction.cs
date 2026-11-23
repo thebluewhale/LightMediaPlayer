@@ -29,7 +29,7 @@ public partial class MainWindow
         return Math.Max(0, _player?.Time ?? 0);
     }
     private int SeekStep(bool ctrl, bool shift) => ctrl ? _settings.CtrlSeekSeconds : shift ? _settings.ShiftSeekSeconds : _settings.SeekSeconds;
-    private void SeekByKey(int direction, bool ctrl, bool shift) => SeekTo(EffectiveSeekTime() + direction * (long)SeekStep(ctrl, shift) * 1000);
+    private void SeekByKey(int direction, bool ctrl, bool shift) => SeekTo(EffectiveSeekTime() + direction * (long)SeekStep(ctrl, shift) * 1000, keyboardSeek: true);
     private void RefreshSeekPreferences()
     {
         var saved = PlayerSettings.Load();

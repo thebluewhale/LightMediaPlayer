@@ -91,17 +91,25 @@ public partial class MainWindow
             ToggleSubtitles();
             Check("subtitle_show", await UntilStable(() => _player!.Spu >= 0));
             await RunSubtitleMenuTestsAsync(Check, UntilStable);
-            void PressKey(Key key) => RaiseEvent(new KeyEventArgs(Keyboard.PrimaryDevice, PresentationSource.FromVisual(this), Environment.TickCount, key) { RoutedEvent = PreviewKeyDownEvent });
+            async Task PressKey(Key key)
+            {
+                // Routed test input still reads the desktop's live modifier state.
+                if (!await Until(() => Keyboard.Modifiers == ModifierKeys.None, 5000))
+                    throw new InvalidOperationException($"Cannot simulate plain {key} while {Keyboard.Modifiers} is pressed.");
+                var input = new KeyEventArgs(Keyboard.PrimaryDevice, PresentationSource.FromVisual(this), Environment.TickCount, key) { RoutedEvent = PreviewKeyDownEvent };
+                RaiseEvent(input);
+                AppLog.Write($"KEY {key} handled={input.Handled} fullscreen={_fullscreen} state={WindowState}");
+            }
             WindowState = WindowState.Normal;
             var before = new Rect(Left, Top, Width, Height);
-            PressKey(Key.Enter);
+            await PressKey(Key.Enter);
             await Task.Delay(300);
-            Check("fullscreen", _fullscreen && TitleBar.Visibility == Visibility.Collapsed && WindowState == WindowState.Maximized);
-            PressKey(Key.Enter);
+            Check("fullscreen", _fullscreen && TitleSlide.Child == TitleBar && ControlsSlide.Child == ControlBar && WindowState == WindowState.Maximized);
+            await PressKey(Key.Enter);
             await Task.Delay(300);
             Check("fullscreen_restore", !_fullscreen && TitleBar.Visibility == Visibility.Visible && new Rect(Left, Top, Width, Height) == before);
-            PressKey(Key.Enter);
-            PressKey(Key.Escape);
+            await PressKey(Key.Enter);
+            await PressKey(Key.Escape);
             Check("fullscreen_escape_minimizes", !_fullscreen && WindowState == WindowState.Minimized && TitleBar.Visibility == Visibility.Visible);
             WindowState = WindowState.Normal;
             Check("escape_restore_bounds", new Rect(Left, Top, Width, Height) == before);

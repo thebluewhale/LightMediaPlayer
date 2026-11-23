@@ -154,6 +154,31 @@ public partial class MainWindow
             await Task.Delay(150);
             ResizeProbeNative.GetWindowRect(hwnd, out var fullscreen);
             Check("fullscreen_fills_monitor", fullscreen.Left == monitor.Monitor.Left && fullscreen.Top == monitor.Monitor.Top && fullscreen.Right == monitor.Monitor.Right && fullscreen.Bottom == monitor.Monitor.Bottom, fullscreen);
+            var videoTopLeft = VideoSurface.PointToScreen(new Point(0, 0));
+            var videoBottomRight = VideoSurface.PointToScreen(new Point(VideoSurface.ActualWidth, VideoSurface.ActualHeight));
+            Check("fullscreen_video_covers_monitor", Math.Abs(videoTopLeft.X - fullscreen.Left) < 1 && Math.Abs(videoTopLeft.Y - fullscreen.Top) < 1 &&
+                Math.Abs(videoBottomRight.X - fullscreen.Right) < 1 && Math.Abs(videoBottomRight.Y - fullscreen.Bottom) < 1);
+            Check("fullscreen_bars_in_video_overlay", TitleSlide.Child == TitleBar && ControlsSlide.Child == ControlBar &&
+                Window.GetWindow(ControlBar) == Window.GetWindow(VideoOverlay) && TitleEdge.ActualHeight > 0 && ControlsEdge.ActualHeight > 0);
+            var videoSize = VideoSurface.RenderSize;
+            SlideFullscreenBar(ControlsSlide, true, ControlsEdge.ActualHeight);
+            await Task.Delay(250);
+            Check("controls_slide_over_stable_video", ControlsSlide.IsVisible && ((TranslateTransform)ControlsSlide.RenderTransform).Y == 0 && VideoSurface.RenderSize == videoSize);
+            SlideFullscreenBar(ControlsSlide, false, ControlsEdge.ActualHeight);
+            await Task.Delay(250);
+            Check("controls_slide_away_without_resizing", !ControlsSlide.IsVisible && VideoSurface.RenderSize == videoSize);
+            // Exercise keyboard seeking outside the bottom edge regardless of where
+            // the physical pointer was left when this window-only probe started.
+            ControlsEdge.IsHitTestVisible = false;
+            System.Windows.Input.Mouse.Synchronize();
+            SeekByKey(1, false, false);
+            var seekFraction = (double)_seekTarget!.Value / _player!.Length;
+            await Task.Delay(250);
+            var opacity = SeekFeedback.Opacity;
+            Check("fullscreen_seek_fades", SeekFeedbackFill.ScaleX == seekFraction && opacity > 0 && opacity < 0.75, opacity);
+            await Task.Delay(850);
+            Check("fullscreen_seek_fades_out", SeekFeedback.Opacity == 0 && !SeekFeedback.IsHitTestVisible);
+            ControlsEdge.IsHitTestVisible = true;
             Check("fullscreen_disables_resize", HitAt(fullscreen.Left + 1, fullscreen.Top + 1) == 1);
             Check("closed_playlist_stays_hidden_in_fullscreen", VideoUsesPlaylistSpace());
             ToggleFullscreen();
@@ -164,6 +189,8 @@ public partial class MainWindow
             Check("fullscreen_restores_bounds", restored.Left == beforeFullscreen.Left && restored.Top == beforeFullscreen.Top && restored.Right == beforeFullscreen.Right && restored.Bottom == beforeFullscreen.Bottom,
                 new { before = new { beforeFullscreen.Left, beforeFullscreen.Top, beforeFullscreen.Right, beforeFullscreen.Bottom }, after = new { restored.Left, restored.Top, restored.Right, restored.Bottom } });
             Check("closed_playlist_stays_hidden_on_return", VideoUsesPlaylistSpace());
+            Check("windowed_bars_restored", TitleBar.Parent == WindowLayout && ControlBar.Parent == WindowLayout &&
+                TitleBar.IsVisible && ControlBar.IsVisible && !FullscreenLayer.IsVisible && !VideoOverlay.ForceCursor);
             var closedWidth = Width;
             TogglePlaylist();
             UpdateLayout();
