@@ -15,6 +15,7 @@ public partial class MainWindow
     private int _detachedIndex;
     private int _queueRevision;
     private CancellationTokenSource? _sortCancellation;
+    private bool _playlistOpen;
     private double _playlistExpandedBy;
     private string[] _neighbors => _queue.Select(e => e.Path).ToArray();
 
@@ -54,27 +55,30 @@ public partial class MainWindow
     private void PlaylistToggle_Click(object sender, RoutedEventArgs e) => TogglePlaylist();
     private void TogglePlaylist()
     {
-        var show = PlaylistPanel.Visibility != Visibility.Visible;
-        if (show)
+        if (_fullscreen) return;
+        _playlistOpen = !_playlistOpen;
+        if (_playlistOpen)
         {
-            const double panelWidth = 300;
-            if (WindowState == WindowState.Normal && !_fullscreen)
+            if (WindowState == WindowState.Normal)
             {
-                _playlistExpandedBy = Math.Min(panelWidth, WindowMagnet.SpaceToRight(this));
+                _playlistExpandedBy = Math.Min(300, WindowMagnet.SpaceToRight(this));
                 Width += _playlistExpandedBy;
             }
-            PlaylistColumn.Width = new GridLength(Math.Min(panelWidth, Math.Max(220, Width - 480)));
-            PlaylistPanel.Visibility = Visibility.Visible;
             PlaylistToggle.Foreground = (System.Windows.Media.Brush)FindResource("Accent");
         }
         else
         {
-            PlaylistPanel.Visibility = Visibility.Collapsed;
-            PlaylistColumn.Width = new GridLength(0);
-            if (WindowState == WindowState.Normal && !_fullscreen) Width = Math.Max(MinWidth, Width - _playlistExpandedBy);
+            if (WindowState == WindowState.Normal) Width = Math.Max(MinWidth, Width - _playlistExpandedBy);
             _playlistExpandedBy = 0;
             PlaylistToggle.ClearValue(ForegroundProperty);
         }
+        UpdatePlaylistLayout();
+    }
+    private void UpdatePlaylistLayout()
+    {
+        var visible = _playlistOpen && !_fullscreen;
+        PlaylistPanel.Visibility = visible ? Visibility.Visible : Visibility.Collapsed;
+        PlaylistColumn.Width = new GridLength(visible ? Math.Clamp(ActualWidth - 480, 220, 300) : 0);
     }
     private async void Playlist_DoubleClick(object sender, MouseButtonEventArgs e)
     {

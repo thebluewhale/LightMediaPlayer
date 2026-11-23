@@ -4,7 +4,7 @@
 #define MediaProgId "LightMediaPlayer.x64.Media"
 #define OpenClassId "{{35BE37DB-35E8-4327-95F2-104965F7A571}"
 #ifndef AppVersion
-#define AppVersion "0.3.9"
+#define AppVersion "0.3.10"
 #endif
 #ifndef PublishDir
 #define PublishDir "..\artifacts\publish\v" + AppVersion

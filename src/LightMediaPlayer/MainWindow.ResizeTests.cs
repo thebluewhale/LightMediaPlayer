@@ -148,11 +148,14 @@ public partial class MainWindow
             WindowState = WindowState.Normal;
             await Task.Delay(150);
             ResizeProbeNative.GetWindowRect(hwnd, out var beforeFullscreen);
+            bool VideoUsesPlaylistSpace() => !PlaylistPanel.IsVisible && PlaylistColumn.ActualWidth == 0 &&
+                Math.Abs(VideoSurface.ActualWidth - ((FrameworkElement)VideoSurface.Parent).ActualWidth) < 1;
             ToggleFullscreen();
             await Task.Delay(150);
             ResizeProbeNative.GetWindowRect(hwnd, out var fullscreen);
             Check("fullscreen_fills_monitor", fullscreen.Left == monitor.Monitor.Left && fullscreen.Top == monitor.Monitor.Top && fullscreen.Right == monitor.Monitor.Right && fullscreen.Bottom == monitor.Monitor.Bottom, fullscreen);
             Check("fullscreen_disables_resize", HitAt(fullscreen.Left + 1, fullscreen.Top + 1) == 1);
+            Check("closed_playlist_stays_hidden_in_fullscreen", VideoUsesPlaylistSpace());
             ToggleFullscreen();
             await Task.Delay(150);
             ResizeProbeNative.GetWindowRect(hwnd, out var restored);
@@ -160,6 +163,23 @@ public partial class MainWindow
                 new { state = WindowState.ToString(), resizeMode = ResizeMode.ToString() });
             Check("fullscreen_restores_bounds", restored.Left == beforeFullscreen.Left && restored.Top == beforeFullscreen.Top && restored.Right == beforeFullscreen.Right && restored.Bottom == beforeFullscreen.Bottom,
                 new { before = new { beforeFullscreen.Left, beforeFullscreen.Top, beforeFullscreen.Right, beforeFullscreen.Bottom }, after = new { restored.Left, restored.Top, restored.Right, restored.Bottom } });
+            Check("closed_playlist_stays_hidden_on_return", VideoUsesPlaylistSpace());
+            var closedWidth = Width;
+            TogglePlaylist();
+            UpdateLayout();
+            var openWidth = Width;
+            var columnWidth = PlaylistColumn.ActualWidth;
+            PlaylistList.SelectedIndex = 0;
+            var selected = PlaylistList.SelectedItem;
+            ToggleFullscreen();
+            UpdateLayout();
+            Check("open_playlist_yields_full_width_to_video", columnWidth > 0 && VideoUsesPlaylistSpace());
+            ToggleFullscreen();
+            UpdateLayout();
+            Check("open_playlist_restored_on_return", PlaylistPanel.IsVisible && PlaylistColumn.ActualWidth == columnWidth &&
+                Width == openWidth && selected != null && PlaylistList.SelectedItem == selected && _player == player && _generation == generation);
+            TogglePlaylist();
+            Check("closing_restored_playlist_recovers_original_width", Width == closedWidth);
             Hide();
             Check("intentional_hide_still_works", !ResizeProbeNative.IsWindowVisible(hwnd));
             Show();

@@ -43,7 +43,7 @@ public partial class MainWindow : Window
         _arguments = arguments;
         InitializeComponent();
         PlaylistList.ItemsSource = _queue;
-        SizeChanged += (_, _) => { if (PlaylistPanel.Visibility == Visibility.Visible) PlaylistColumn.Width = new GridLength(Math.Min(300, Math.Max(220, ActualWidth - 480))); };
+        SizeChanged += (_, _) => { if (_playlistOpen && !_fullscreen) UpdatePlaylistLayout(); };
         _osdTimer.Tick += (_, _) => { OsdBubble.Visibility = Visibility.Collapsed; _osdTimer.Stop(); };
         SourceInitialized += (_, _) =>
         {
@@ -502,6 +502,8 @@ public partial class MainWindow : Window
             _normalBounds = WindowState == WindowState.Normal ? new Rect(Left, Top, Width, Height) : RestoreBounds;
             _beforeFullscreen = WindowState;
             _fullscreen = true;
+            PlaylistToggle.Visibility = Visibility.Collapsed;
+            UpdatePlaylistLayout();
             WindowState = WindowState.Normal;
             ResizeMode = ResizeMode.NoResize;
             TitleBar.Visibility = Visibility.Collapsed;
@@ -515,6 +517,8 @@ public partial class MainWindow : Window
             TitleBar.Visibility = Visibility.Visible;
             Left = _normalBounds.Left; Top = _normalBounds.Top; Width = _normalBounds.Width; Height = _normalBounds.Height;
             WindowState = _beforeFullscreen;
+            PlaylistToggle.Visibility = Visibility.Visible;
+            UpdatePlaylistLayout();
         }
     }
 
