@@ -93,8 +93,7 @@ public partial class MainWindow : Window
                 else await RunSelfTestAsync();
                 return;
             }
-            var input = _arguments.FirstOrDefault(a => !a.StartsWith("--", StringComparison.Ordinal));
-            if (input != null) await OpenPathAsync(input);
+            await OpenFilesAsync(_arguments.Where(a => !a.StartsWith("--", StringComparison.Ordinal)).ToArray());
         }
         catch (Exception ex) { ShowError("재생 엔진을 시작할 수 없습니다.", ex); }
     }
@@ -392,12 +391,13 @@ public partial class MainWindow : Window
     {
         if (paths.Length == 0) return;
         var media = paths.Where(p => !MediaFiles.Subtitles.Contains(Path.GetExtension(p))).ToArray();
-        if (media.Length > 0) await OpenPathAsync(media[0]);
-        foreach (var file in media.Skip(1))
+        if (media.Length == 1) await OpenPathAsync(media[0]);
+        else if (media.Length > 1)
         {
-            var start = new ProcessStartInfo(Environment.ProcessPath!) { UseShellExecute = false };
-            start.ArgumentList.Add(file);
-            Process.Start(start);
+            var entries = ReadPlaylistFiles(media);
+            if (entries.Count == 0) { SetStatus("목록에 재생할 로컬 미디어 파일이 없습니다.", true); return; }
+            ReplaceQueue(entries);
+            await PlayEntryAsync(_queue[0]);
         }
         foreach (var subtitle in paths.Where(p => MediaFiles.Subtitles.Contains(Path.GetExtension(p)))) await LoadSubtitleAsync(subtitle);
     }
@@ -482,10 +482,10 @@ public partial class MainWindow : Window
         var subtitles = CreateSubtitleTrackMenu();
         menu.Items.Add(audio); menu.Items.Add(subtitles);
         menu.Items.Add(new Separator());
-        Add("전체화면 / 창 모드    Alt+Enter", ToggleFullscreen);
+        Add("전체화면 / 창 모드    Enter", ToggleFullscreen);
         Add("소프트웨어 디코딩으로 다시 열기", () => { if (_path != null) _ = OpenPathAsync(_path, true, Math.Max(0, _player?.Time ?? 0), _player?.State == VLCState.Paused, true); }, _path != null);
         Add("로그 폴더 열기", () => { Directory.CreateDirectory(AppLog.DirectoryPath); Process.Start(new ProcessStartInfo(AppLog.DirectoryPath) { UseShellExecute = true }); });
-        Add("단축키 안내", () => MessageBox.Show(this, $"Space  재생 / 일시정지\nS  정지\n← / →  {_settings.SeekSeconds}초 이동\nCtrl + ← / →  {_settings.CtrlSeekSeconds}초 이동\nShift + ← / →  {_settings.ShiftSeekSeconds}초 이동\n↑ / ↓  음량 5% 조절\nM  음소거\nAlt+Enter / F11 / 영상 더블클릭  전체화면\nEsc  전체화면 해제\nCtrl+O  파일 열기\nCtrl+Shift+O  자막 열기\nV  자막 표시 / 숨김\nPage Up / Page Down  이전 / 다음 파일\nHome  처음으로 이동", "단축키"));
+        Add("단축키 안내", () => MessageBox.Show(this, $"Space  재생 / 일시정지\nS  정지\n← / →  {_settings.SeekSeconds}초 이동\nCtrl + ← / →  {_settings.CtrlSeekSeconds}초 이동\nShift + ← / →  {_settings.ShiftSeekSeconds}초 이동\n↑ / ↓  음량 5% 조절\nM  음소거\nEnter / Alt+Enter / F11 / 영상 더블클릭  전체화면 전환\nEsc  전체화면 해제 후 최소화\nCtrl+O  파일 열기\nCtrl+Shift+O  자막 열기\nV  자막 표시 / 숨김\nPage Up / Page Down  이전 / 다음 파일\nHome  처음으로 이동", "단축키"));
         Add("오픈소스 정보", () =>
         {
             using var stream = Assembly.GetExecutingAssembly().GetManifestResourceStream("notices.txt")!;
@@ -537,8 +537,15 @@ public partial class MainWindow : Window
         else if (key == Key.Home) SeekTo(0);
         else if (key == Key.PageUp) await MoveFileAsync(-1);
         else if (key == Key.PageDown) await MoveFileAsync(1);
-        else if (key == Key.F11 || (key == Key.Enter && Keyboard.Modifiers.HasFlag(ModifierKeys.Alt))) ToggleFullscreen();
-        else if (key == Key.Escape && _fullscreen) ToggleFullscreen();
+        else if (key == Key.F11 || (key == Key.Enter && Keyboard.Modifiers is ModifierKeys.None or ModifierKeys.Alt))
+        {
+            if (!e.IsRepeat) ToggleFullscreen();
+        }
+        else if (key == Key.Escape && _fullscreen)
+        {
+            ToggleFullscreen();
+            WindowState = WindowState.Minimized;
+        }
         else { e.Handled = false; return; }
         e.Handled = true;
     }

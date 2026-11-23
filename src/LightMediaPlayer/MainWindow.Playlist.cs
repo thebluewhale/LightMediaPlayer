@@ -111,19 +111,25 @@ public partial class MainWindow
     private void AddPlaylistFiles(IEnumerable<string> paths)
     {
         CancelSorting();
-        var added = 0;
+        var files = ReadPlaylistFiles(paths);
+        foreach (var file in files) _queue.Add(new PlaylistEntry(file));
+        RefreshQueue();
+        PlaylistInfo.Text = files.Count > 0 ? $"{_queue.Count}개 파일 · {files.Count}개 추가됨" : "추가할 미디어 파일이 없습니다";
+    }
+    private static List<string> ReadPlaylistFiles(IEnumerable<string> paths)
+    {
+        var files = new List<string>();
         foreach (var path in paths)
         {
             if (!File.Exists(path) || MediaFiles.Subtitles.Contains(Path.GetExtension(path))) continue;
             try
             {
                 var entries = PlaylistFiles.Read(path) ?? [Path.GetFullPath(path)];
-                foreach (var file in entries) { _queue.Add(new PlaylistEntry(file)); added++; }
+                files.AddRange(entries);
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or System.Xml.XmlException) { AppLog.Write(ex.Message); }
         }
-        RefreshQueue();
-        PlaylistInfo.Text = added > 0 ? $"{_queue.Count}개 파일 · {added}개 추가됨" : "추가할 미디어 파일이 없습니다";
+        return files;
     }
     private void PlaylistDelete_Click(object sender, RoutedEventArgs e) => RemoveSelectedEntry();
     private void RemoveSelectedEntry()

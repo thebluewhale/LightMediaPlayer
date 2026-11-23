@@ -2,8 +2,9 @@
 ; Separate the machine-wide handler from older per-user installations.
 #define RegisteredName "Light Media Player (x64)"
 #define MediaProgId "LightMediaPlayer.x64.Media"
+#define OpenClassId "{{35BE37DB-35E8-4327-95F2-104965F7A571}"
 #ifndef AppVersion
-#define AppVersion "0.3.8"
+#define AppVersion "0.3.9"
 #endif
 #ifndef PublishDir
 #define PublishDir "..\artifacts\publish\v" + AppVersion
@@ -52,11 +53,17 @@ Name: "{group}\{#AppName}"; Filename: "{app}\LightMediaPlayer.exe"
 Name: "{autodesktop}\{#AppName}"; Filename: "{app}\LightMediaPlayer.exe"; Tasks: desktopicon
 
 [Registry]
+Root: HKLM; Subkey: "Software\Classes\CLSID\{#OpenClassId}"; ValueType: string; ValueData: "Light Media Player Open"; Flags: uninsdeletekey
+Root: HKLM; Subkey: "Software\Classes\CLSID\{#OpenClassId}\LocalServer32"; ValueType: string; ValueData: """{app}\LightMediaPlayer.exe"" --shell-open"
 Root: HKLM; Subkey: "Software\Classes\{#MediaProgId}"; ValueType: string; ValueData: "Light Media Player 미디어"; Flags: uninsdeletekey
 Root: HKLM; Subkey: "Software\Classes\{#MediaProgId}\DefaultIcon"; ValueType: string; ValueData: """{app}\LightMediaPlayer.exe"",0"
 Root: HKLM; Subkey: "Software\Classes\{#MediaProgId}\shell\open\command"; ValueType: string; ValueData: """{app}\LightMediaPlayer.exe"" ""%1"""
+Root: HKLM; Subkey: "Software\Classes\{#MediaProgId}\shell\open"; ValueType: string; ValueName: "MultiSelectModel"; ValueData: "Player"
+Root: HKLM; Subkey: "Software\Classes\{#MediaProgId}\shell\open\DropTarget"; ValueType: string; ValueName: "CLSID"; ValueData: "{#OpenClassId}"
 Root: HKLM; Subkey: "Software\Classes\Applications\LightMediaPlayer.exe"; ValueType: string; ValueName: "FriendlyAppName"; ValueData: "{#AppName}"; Flags: uninsdeletekey
 Root: HKLM; Subkey: "Software\Classes\Applications\LightMediaPlayer.exe\shell\open\command"; ValueType: string; ValueData: """{app}\LightMediaPlayer.exe"" ""%1"""
+Root: HKLM; Subkey: "Software\Classes\Applications\LightMediaPlayer.exe\shell\open"; ValueType: string; ValueName: "MultiSelectModel"; ValueData: "Player"
+Root: HKLM; Subkey: "Software\Classes\Applications\LightMediaPlayer.exe\shell\open\DropTarget"; ValueType: string; ValueName: "CLSID"; ValueData: "{#OpenClassId}"
 Root: HKLM; Subkey: "Software\LightMediaPlayer\Capabilities"; ValueType: string; ValueName: "ApplicationName"; ValueData: "{#RegisteredName}"; Flags: uninsdeletekey
 Root: HKLM; Subkey: "Software\LightMediaPlayer\Capabilities"; ValueType: string; ValueName: "ApplicationIcon"; ValueData: """{app}\LightMediaPlayer.exe"",0"
 Root: HKLM; Subkey: "Software\LightMediaPlayer\Capabilities"; ValueType: string; ValueName: "ApplicationDescription"; ValueData: "가벼운 동영상 및 음악 플레이어"

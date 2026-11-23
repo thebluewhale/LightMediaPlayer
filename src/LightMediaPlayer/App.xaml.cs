@@ -5,6 +5,8 @@ namespace LightMediaPlayer;
 
 public partial class App : Application
 {
+    private ExplorerOpenServer? _explorer;
+
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
@@ -15,9 +17,26 @@ public partial class App : Application
             MessageBox.Show("오류가 발생했습니다.\n" + args.Exception.Message, "Light Media Player", MessageBoxButton.OK, MessageBoxImage.Error);
             args.Handled = true;
         };
-        var window = new MainWindow(e.Args);
+        if (e.Args.FirstOrDefault() == "--shell-open")
+        {
+            _explorer = new ExplorerOpenServer();
+            _explorer.Start(paths => Dispatcher.InvokeAsync(() => ShowPlayer(paths)));
+            return;
+        }
+        ShowPlayer(e.Args);
+    }
+
+    private void ShowPlayer(string[] paths)
+    {
+        var window = new MainWindow(paths);
         MainWindow = window;
         window.Show();
+    }
+
+    protected override void OnExit(ExitEventArgs e)
+    {
+        _explorer?.Dispose();
+        base.OnExit(e);
     }
 }
 
