@@ -40,13 +40,16 @@ public partial class MainWindow
         PlaylistSort.IsEnabled = _queue.Count > 1;
         UpdateButtons();
     }
-    private int NavigationTarget(int direction)
+    private PlaylistEntry? NavigationTarget(int direction, bool wrap = false)
     {
+        if (_queue.Count == 0) return null;
         var index = _currentEntry == null ? -1 : _queue.IndexOf(_currentEntry);
-        if (index >= 0) return index + direction;
         // Removing the currently playing row never stops playback. Next continues
         // from its former slot; previous continues from the preceding slot.
-        return direction > 0 ? Math.Min(_detachedIndex, _queue.Count) : Math.Min(_detachedIndex, _queue.Count) - 1;
+        var next = index >= 0 ? index + direction : Math.Min(_detachedIndex, _queue.Count) + (direction < 0 ? -1 : 0);
+        if (wrap) next = (next + _queue.Count) % _queue.Count;
+        if (next < 0 || next >= _queue.Count || _queue[next] == _currentEntry) return null;
+        return _queue[next];
     }
     private async Task PlayEntryAsync(PlaylistEntry entry)
     {

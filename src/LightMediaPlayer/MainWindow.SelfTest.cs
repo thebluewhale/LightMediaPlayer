@@ -145,6 +145,8 @@ public partial class MainWindow
             Check("selection_plays_first_and_queues_in_order", _path == selection[0] && _neighbors.SequenceEqual(selection) && await Until(() => _player?.IsPlaying == true));
             foreach (var next in new[] { 1, 2, 0 })
             {
+                var completedAt = new TaskCompletionSource<long>(TaskCreationOptions.RunContinuationsAsynchronously);
+                _player!.EndReached += (_, _) => completedAt.TrySetResult(Environment.TickCount64);
                 // Let the 24-second FLAC run to its natural end; its demuxer may
                 // accept a near-EOF seek without reaching the last audio frames.
                 if (_path != selection[1])
@@ -155,8 +157,29 @@ public partial class MainWindow
                 var advanced = await Until(() => _currentEntry == _queue[next] && _path == selection[next] &&
                     _player?.IsPlaying == true, next == 2 ? 35000 : 7000);
                 Check($"playlist_eof_advances_to_index_{next}", advanced, _path);
+                var elapsed = completedAt.Task.IsCompletedSuccessfully ? Environment.TickCount64 - completedAt.Task.Result : -1;
+                Check($"playlist_automatic_gap_before_{next}", elapsed >= 1990, elapsed);
                 if (!advanced) break;
             }
+            // At EOF, Page Up must jump to the last row immediately and invalidate
+            // the pending automatic move to the second row.
+            await Until(() => _player?.IsSeekable == true && _player.Time > 200);
+            SeekTo(_player!.Length - 750);
+            Check("playlist_first_eof_waits", await Until(() => _ended && _currentEntry == _queue[0], 7000));
+            var endedGeneration = _generation;
+            await PressKey(Key.PageUp);
+            Check("page_up_wraps_immediately", _generation != endedGeneration &&
+                await Until(() => _currentEntry == _queue[^1] && _player?.IsPlaying == true));
+            await Task.Delay(2200);
+            Check("manual_navigation_cancels_auto_advance", _currentEntry == _queue[^1] && _player?.IsPlaying == true);
+            await PressKey(Key.PageDown);
+            Check("page_down_wraps_to_first", await Until(() => _currentEntry == _queue[0] && _player?.IsPlaying == true));
+            await Until(() => _player?.IsSeekable == true && _player.Time > 200);
+            SeekTo(_player!.Length - 750);
+            Check("playlist_eof_before_stop", await Until(() => _ended, 7000));
+            await StopPlaybackAsync();
+            await Task.Delay(2200);
+            Check("stop_cancels_auto_advance", _stopped && _player == null && _currentEntry == _queue[0]);
             ReplaceQueue([]);
             await OpenPathAsync(Path.Combine(dir, "영상2.mkv"));
             await Until(() => _player?.IsPlaying == true);

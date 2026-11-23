@@ -211,9 +211,12 @@ public partial class MainWindow : Window
             {
                 if (!_hasPlayableStreams && !HasPlayableStreams()) { HandlePlaybackError(generation); return; }
                 _ended = true; SetStatus("재생 완료"); UpdateButtons(); AppLog.Write("ENDED");
-                // Use the live order, including the former slot of a removed playing row.
-                if (_queue.Count > 0 && (_queue.Count > 1 || _queue[0] != _currentEntry))
-                    await PlayEntryAsync(_queue[NavigationTarget(1) % _queue.Count]);
+                if (NavigationTarget(1, wrap: true) == null) return;
+                await Task.Delay(TimeSpan.FromSeconds(2));
+                // Stop, replay, another open or closing invalidates the completed player.
+                // Resolve the next entry after the wait so playlist edits take effect.
+                if (!_closing && generation == _generation && _ended)
+                    await MoveFileAsync(1, wrap: true);
             });
             current.EncounteredError += (_, _) => Post(generation, () => HandlePlaybackError(generation));
             if (_videoView == null)
@@ -352,18 +355,15 @@ public partial class MainWindow : Window
         PlayButton.ToolTip = playing ? "일시정지 (Space)" : "재생 (Space)";
         System.Windows.Automation.AutomationProperties.SetName(PlayButton, playing ? "일시정지" : "재생");
         StopButton.IsEnabled = _path != null && !_stopped;
-        var previous = NavigationTarget(-1);
-        var next = NavigationTarget(1);
-        PreviousButton.IsEnabled = previous >= 0 && previous < _queue.Count;
-        NextButton.IsEnabled = next >= 0 && next < _queue.Count;
+        PreviousButton.IsEnabled = NavigationTarget(-1) != null;
+        NextButton.IsEnabled = NavigationTarget(1) != null;
         if (PlaylistPrevious != null) PlaylistPrevious.IsEnabled = PreviousButton.IsEnabled;
         if (PlaylistNext != null) PlaylistNext.IsEnabled = NextButton.IsEnabled;
     }
 
-    private async Task MoveFileAsync(int direction)
+    private async Task MoveFileAsync(int direction, bool wrap = false)
     {
-        var next = NavigationTarget(direction);
-        if (next >= 0 && next < _queue.Count) await PlayEntryAsync(_queue[next]);
+        if (NavigationTarget(direction, wrap) is { } next) await PlayEntryAsync(next);
     }
 
     private void SeekTo(long position, bool keyboardSeek = false)
@@ -555,8 +555,8 @@ public partial class MainWindow : Window
         else if (key == Key.M) ToggleMute();
         else if (key == Key.V) ToggleSubtitles();
         else if (key == Key.Home) SeekTo(0);
-        else if (key == Key.PageUp) await MoveFileAsync(-1);
-        else if (key == Key.PageDown) await MoveFileAsync(1);
+        else if (key == Key.PageUp) await MoveFileAsync(-1, wrap: true);
+        else if (key == Key.PageDown) await MoveFileAsync(1, wrap: true);
         else if (key == Key.F11 || (key == Key.Enter && Keyboard.Modifiers is ModifierKeys.None or ModifierKeys.Alt))
         {
             if (!e.IsRepeat) ToggleFullscreen();
