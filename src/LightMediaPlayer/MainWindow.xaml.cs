@@ -42,6 +42,7 @@ public partial class MainWindow : Window
     {
         _arguments = arguments;
         InitializeComponent();
+        FullscreenProgress.DataContext = SeekBar;
         PlaylistList.ItemsSource = _queue;
         SizeChanged += (_, _) => { if (_playlistOpen && !_fullscreen) UpdatePlaylistLayout(); };
         _osdTimer.Tick += (_, _) => { OsdBubble.Visibility = Visibility.Collapsed; _osdTimer.Stop(); };
@@ -366,7 +367,7 @@ public partial class MainWindow : Window
         if (NavigationTarget(direction, wrap) is { } next) await PlayEntryAsync(next);
     }
 
-    private void SeekTo(long position, bool keyboardSeek = false)
+    private void SeekTo(long position)
     {
         if (_player?.IsSeekable == true && !_stopped && !_ended)
         {
@@ -376,11 +377,11 @@ public partial class MainWindow : Window
             _player.Time = target;
             _seekTarget = target;
             _seekRequestedAt = Environment.TickCount64;
+            SeekBar.Maximum = Math.Max(1, duration);
+            SeekBar.Value = target;
             var delta = target - before;
             var progress = duration > 0 ? $", ({Math.Round(100d * target / duration, MidpointRounding.AwayFromZero)}%)" : string.Empty;
             ShowOsd($"{Math.Abs(delta) / 1000:0}초 {(delta >= 0 ? "앞으로" : "뒤로")}, {FormatOsdTime(target)}{progress}");
-            if (keyboardSeek && _fullscreen && !ControlsEdge.IsMouseOver && duration > 0)
-                ShowFullscreenSeek((double)target / duration);
         }
     }
     private void SeekAt(MouseEventArgs e)

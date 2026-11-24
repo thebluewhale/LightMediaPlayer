@@ -30,7 +30,6 @@ public partial class MainWindow
         else
         {
             FullscreenLayer.Visibility = Visibility.Collapsed;
-            SeekFeedback.BeginAnimation(OpacityProperty, null);
             foreach (var slide in new[] { TitleSlide, ControlsSlide })
             {
                 ((TranslateTransform)slide.RenderTransform).BeginAnimation(TranslateTransform.YProperty, null);
@@ -47,7 +46,6 @@ public partial class MainWindow
         if (!_fullscreen || _closing) return;
         var edge = (Grid)sender;
         bool top = edge == TitleEdge;
-        if (!top && edge.IsMouseOver) SeekFeedback.BeginAnimation(OpacityProperty, null);
         SlideFullscreenBar(top ? TitleSlide : ControlsSlide, edge.IsMouseOver, top ? -edge.ActualHeight : edge.ActualHeight);
     }
 
@@ -69,11 +67,8 @@ public partial class MainWindow
         transform.BeginAnimation(TranslateTransform.YProperty, animation);
     }
 
-    private void ShowFullscreenSeek(double fraction)
-    {
-        SeekFeedbackFill.ScaleX = fraction;
-        SeekFeedback.BeginAnimation(OpacityProperty, new DoubleAnimation(0.75, 0, TimeSpan.FromSeconds(1)) { FillBehavior = FillBehavior.Stop });
-    }
+    private void ControlsSlide_IsVisibleChanged(object sender, DependencyPropertyChangedEventArgs e) =>
+        FullscreenProgress.Visibility = (bool)e.NewValue ? Visibility.Hidden : Visibility.Visible;
 
     private void VideoOverlay_MouseEnter(object sender, MouseEventArgs e)
     {

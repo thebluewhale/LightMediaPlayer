@@ -161,23 +161,29 @@ public partial class MainWindow
             Check("fullscreen_bars_in_video_overlay", TitleSlide.Child == TitleBar && ControlsSlide.Child == ControlBar &&
                 Window.GetWindow(ControlBar) == Window.GetWindow(VideoOverlay) && TitleEdge.ActualHeight > 0 && ControlsEdge.ActualHeight > 0);
             var videoSize = VideoSurface.RenderSize;
+            // Keep the physical pointer from triggering an unrelated hover during the probe.
+            ControlsEdge.IsHitTestVisible = false;
+            System.Windows.Input.Mouse.Synchronize();
+            await Task.Delay(250);
+            Check("fullscreen_progress_visible_before_seek", FullscreenProgress.IsVisible && FullscreenProgress.Value > 0 &&
+                FullscreenProgress.ActualHeight == 5 && FullscreenProgress.Opacity == 0.75 && !FullscreenProgress.IsHitTestVisible);
             SlideFullscreenBar(ControlsSlide, true, ControlsEdge.ActualHeight);
+            Check("fullscreen_progress_hidden_as_controls_enter", !FullscreenProgress.IsVisible);
             await Task.Delay(250);
             Check("controls_slide_over_stable_video", ControlsSlide.IsVisible && ((TranslateTransform)ControlsSlide.RenderTransform).Y == 0 && VideoSurface.RenderSize == videoSize);
             SlideFullscreenBar(ControlsSlide, false, ControlsEdge.ActualHeight);
+            Check("fullscreen_progress_hidden_while_controls_leave", !FullscreenProgress.IsVisible);
             await Task.Delay(250);
             Check("controls_slide_away_without_resizing", !ControlsSlide.IsVisible && VideoSurface.RenderSize == videoSize);
-            // Exercise keyboard seeking outside the bottom edge regardless of where
-            // the physical pointer was left when this window-only probe started.
-            ControlsEdge.IsHitTestVisible = false;
-            System.Windows.Input.Mouse.Synchronize();
+            Check("fullscreen_progress_restored_after_controls_leave", FullscreenProgress.IsVisible);
             SeekByKey(1, false, false);
-            var seekFraction = (double)_seekTarget!.Value / _player!.Length;
-            await Task.Delay(250);
-            var opacity = SeekFeedback.Opacity;
-            Check("fullscreen_seek_fades", SeekFeedbackFill.ScaleX == seekFraction && opacity > 0 && opacity < 0.75, opacity);
-            await Task.Delay(850);
-            Check("fullscreen_seek_fades_out", SeekFeedback.Opacity == 0 && !SeekFeedback.IsHitTestVisible);
+            var target = _seekTarget!.Value;
+            Check("fullscreen_progress_updated_on_seek", FullscreenProgress.Value == target && FullscreenProgress.Maximum == _player!.Length);
+            await Task.Delay(1500);
+            var fill = (FrameworkElement)FullscreenProgress.Template.FindName("PART_Indicator", FullscreenProgress);
+            var expectedWidth = FullscreenProgress.ActualWidth * FullscreenProgress.Value / FullscreenProgress.Maximum;
+            Check("fullscreen_progress_persists_and_tracks_playback", FullscreenProgress.IsVisible && FullscreenProgress.Opacity == 0.75 &&
+                FullscreenProgress.Value > target && Math.Abs(fill.ActualWidth - expectedWidth) < 1);
             ControlsEdge.IsHitTestVisible = true;
             Check("fullscreen_disables_resize", HitAt(fullscreen.Left + 1, fullscreen.Top + 1) == 1);
             Check("closed_playlist_stays_hidden_in_fullscreen", VideoUsesPlaylistSpace());

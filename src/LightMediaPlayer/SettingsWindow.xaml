@@ -1,4 +1,5 @@
 <Window x:Class="LightMediaPlayer.SettingsWindow" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+ Icon="Assets/player.ico"
  Title="설정 — Light Media Player" Width="650" Height="450" ResizeMode="NoResize" WindowStartupLocation="CenterOwner" Background="#181F27" Foreground="#E8EDF3" FontFamily="Segoe UI, Malgun Gothic" ShowInTaskbar="False">
  <Window.Resources>
   <Style TargetType="TabItem"><Setter Property="Foreground" Value="#AEBAC8"/><Setter Property="Padding" Value="16,12"/><Setter Property="Template"><Setter.Value><ControlTemplate TargetType="TabItem"><Border x:Name="Tab" Background="#181F27" Padding="{TemplateBinding Padding}"><ContentPresenter ContentSource="Header"/></Border><ControlTemplate.Triggers><Trigger Property="IsSelected" Value="True"><Setter TargetName="Tab" Property="Background" Value="#263D3B"/><Setter Property="Foreground" Value="#8CE5D5"/></Trigger></ControlTemplate.Triggers></ControlTemplate></Setter.Value></Setter></Style>
