@@ -70,6 +70,9 @@ public partial class MainWindow
     private void ControlsSlide_IsVisibleChanged(object sender, DependencyPropertyChangedEventArgs e) =>
         FullscreenProgress.Visibility = (bool)e.NewValue ? Visibility.Hidden : Visibility.Visible;
 
+    private void TitleSlide_IsVisibleChanged(object sender, DependencyPropertyChangedEventArgs e) =>
+        StartTitleBubble.Margin = new Thickness(16, (bool)e.NewValue ? 16 + TitleBar.Height : 16, 16, 16);
+
     private void VideoOverlay_MouseEnter(object sender, MouseEventArgs e)
     {
         if (_fullscreen) RestartPointerTimer();

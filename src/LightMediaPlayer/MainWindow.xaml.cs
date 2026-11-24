@@ -19,6 +19,8 @@ public partial class MainWindow : Window
     private readonly string[] _arguments;
     private readonly PlayerSettings _settings = PlayerSettings.Load();
     private readonly DispatcherTimer _timer = new() { Interval = TimeSpan.FromMilliseconds(200) };
+    private readonly DispatcherTimer _startTitleTimer = new() { Interval = TimeSpan.FromSeconds(3) };
+    private bool _startTitleShown;
     private readonly SemaphoreSlim _operations = new(1, 1);
     private LibVLC? _vlc;
     private VlcPlayer? _player;
@@ -43,6 +45,8 @@ public partial class MainWindow : Window
         _arguments = arguments;
         InitializeComponent();
         FullscreenProgress.DataContext = SeekBar;
+        StartTitle.DataContext = MediaTitle;
+        _startTitleTimer.Tick += (_, _) => HideStartTitle();
         PlaylistList.ItemsSource = _queue;
         SizeChanged += (_, _) => { if (_playlistOpen && !_fullscreen) UpdatePlaylistLayout(); };
         _osdTimer.Tick += (_, _) => { OsdBubble.Visibility = Visibility.Collapsed; _osdTimer.Stop(); };
@@ -183,7 +187,9 @@ public partial class MainWindow : Window
             RefreshQueue();
             FileText.Text = Path.GetFileName(path);
             FileText.ToolTip = path;
-            Title = Path.GetFileName(path) + " — Light Media Player";
+            MediaTitle.Text = Path.GetFileNameWithoutExtension(path);
+            if (MediaTitle.Text.Length == 0) MediaTitle.Text = FileText.Text;
+            Title = MediaTitle.Text + " — Light Media Player";
             SeekBar.Value = 0;
             TimeText.Text = "00:00 / 00:00";
             SetStatus(software ? "소프트웨어 디코딩으로 여는 중…" : "파일을 여는 중…");
@@ -211,6 +217,7 @@ public partial class MainWindow : Window
             current.EndReached += (_, _) => Post(generation, async () =>
             {
                 if (!_hasPlayableStreams && !HasPlayableStreams()) { HandlePlaybackError(generation); return; }
+                HideStartTitle();
                 _ended = true; SetStatus("재생 완료"); UpdateButtons(); AppLog.Write("ENDED");
                 if (NavigationTarget(1, wrap: true) == null) return;
                 await Task.Delay(TimeSpan.FromSeconds(2));
@@ -269,6 +276,7 @@ public partial class MainWindow : Window
         else
         {
             _stopped = true;
+            HideStartTitle();
             ShowError("파일이 손상되었거나 지원하지 않는 형식입니다. DRM 파일과 일부 전용 형식은 재생할 수 없습니다.");
             UpdateButtons();
         }
@@ -276,6 +284,8 @@ public partial class MainWindow : Window
 
     private async Task ReleasePlayerAsync()
     {
+        HideStartTitle();
+        _startTitleShown = false;
         if (_videoView != null) _videoView.MediaPlayer = null;
         var player = _player;
         var media = _media;
@@ -338,7 +348,24 @@ public partial class MainWindow : Window
             var audioOnly = !_player.VideoTrackDescription.Any(t => t.Id >= 0);
             EmptyState.Visibility = audioOnly ? Visibility.Visible : Visibility.Collapsed;
             if (audioOnly) { EmptyTitle.Text = "음악 재생"; EmptyDetail.Text = Path.GetFileName(_path); EmptyOpenButton.Visibility = Visibility.Collapsed; }
+            else if (!_stopped && !_ended)
+            {
+                if (!_startTitleShown)
+                {
+                    _startTitleShown = true;
+                    StartTitleBubble.Visibility = Visibility.Visible;
+                    _startTitleTimer.Start();
+                }
+                if (_startTitleTimer.IsEnabled)
+                    StartDuration.Text = length > 0 ? $"({FormatOsdTime(length)})" : "(--:--:--)";
+            }
         }
+    }
+
+    private void HideStartTitle()
+    {
+        _startTitleTimer.Stop();
+        StartTitleBubble.Visibility = Visibility.Collapsed;
     }
 
     private bool HasPlayableStreams() => _media?.Tracks.Any(t => t.TrackType is TrackType.Video or TrackType.Audio) == true;

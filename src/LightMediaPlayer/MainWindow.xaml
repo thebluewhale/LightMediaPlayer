@@ -7,7 +7,11 @@
   <Grid x:Name="TitleBar" Grid.ColumnSpan="2" Height="44" Background="#181F27">
    <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
    <Image Source="Assets/player.ico" Width="20" Height="20" Margin="18,0,10,0" VerticalAlignment="Center" RenderOptions.BitmapScalingMode="HighQuality"/>
-   <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center"><TextBlock Text="LIGHT" FontWeight="SemiBold" FontSize="13"/><TextBlock Text="  MEDIA PLAYER" Foreground="#8A98A8" FontSize="11" VerticalAlignment="Center" Margin="2,0,0,0"/></StackPanel>
+   <DockPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,0,12,0">
+    <TextBlock Text="LIGHT" FontWeight="SemiBold" FontSize="13"/>
+    <TextBlock Text="  MEDIA PLAYER" Foreground="#8A98A8" FontSize="11" VerticalAlignment="Center" Margin="2,0,12,0"/>
+    <TextBlock x:Name="MediaTitle" FontSize="13" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}"/>
+   </DockPanel>
    <StackPanel x:Name="TitleButtons" Grid.Column="2" Orientation="Horizontal"><Button Content="&#xE921;" FontFamily="Segoe MDL2 Assets" Width="46" ToolTip="최소화" AutomationProperties.Name="최소화" Click="Minimize_Click"/><Button x:Name="MaximizeButton" Content="&#xE922;" FontFamily="Segoe MDL2 Assets" Width="46" ToolTip="최대화 / 복원" AutomationProperties.Name="최대화" Click="Maximize_Click"/><Button Content="&#xE8BB;" FontFamily="Segoe MDL2 Assets" Width="46" ToolTip="종료" AutomationProperties.Name="종료" Click="Close_Click"/></StackPanel>
   </Grid>
   <Grid x:Name="VideoSurface" Grid.Row="1" Background="Black">
@@ -20,12 +24,21 @@
       <TextBlock x:Name="EmptyDetail" Text="영상이나 음악 파일을 여기에 놓으세요" Foreground="#8593A3" FontSize="13" TextAlignment="Center" Margin="0,12,0,24" TextWrapping="Wrap"/>
       <Button x:Name="EmptyOpenButton" Content="파일 열기    Ctrl+O" Foreground="#152722" Background="{StaticResource Accent}" HorizontalAlignment="Center" Padding="22,11" Click="Open_Click"/>
      </StackPanel>
-     <Border x:Name="OsdBubble" Visibility="Collapsed" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="16" Padding="11,7" CornerRadius="5" Background="#B81B242D" IsHitTestVisible="False" MaxWidth="500">
+     <Grid VerticalAlignment="Top" IsHitTestVisible="False">
+      <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+      <Border x:Name="StartTitleBubble" Visibility="Collapsed" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="16" Padding="11,7" CornerRadius="5" Background="#B81B242D">
+       <DockPanel TextElement.Foreground="#F0F5FA" TextElement.FontSize="13">
+        <TextBlock x:Name="StartDuration" DockPanel.Dock="Right" Margin="4,0,0,0"/>
+        <TextBlock x:Name="StartTitle" Text="{Binding Text}" TextTrimming="CharacterEllipsis"/>
+       </DockPanel>
+      </Border>
+     <Border x:Name="OsdBubble" Grid.Column="1" Visibility="Collapsed" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="16" Padding="11,7" CornerRadius="5" Background="#B81B242D" IsHitTestVisible="False" MaxWidth="500">
       <TextBlock x:Name="OsdText" Foreground="#F0F5FA" FontSize="13" TextWrapping="Wrap"/>
      </Border>
      </Grid>
+     </Grid>
      <Grid x:Name="FullscreenLayer" Visibility="Collapsed" TextElement.Foreground="#E8EDF3" TextElement.FontFamily="Segoe UI, Malgun Gothic">
-      <ProgressBar x:Name="FullscreenProgress" Height="5" VerticalAlignment="Bottom" Opacity="0.75" Background="#59616B" Foreground="{StaticResource Accent}"
+      <ProgressBar x:Name="FullscreenProgress" Height="5" VerticalAlignment="Bottom" Opacity="0.75" Background="#59616B" Foreground="{StaticResource PlaybackGradient}"
                    IsHitTestVisible="False" Focusable="False" Maximum="{Binding Maximum}" Value="{Binding Value, Mode=OneWay}" AutomationProperties.Name="전체 화면 재생 위치">
        <ProgressBar.Template>
         <ControlTemplate TargetType="ProgressBar">
@@ -36,7 +49,7 @@
        </ProgressBar.Template>
       </ProgressBar>
       <Grid x:Name="TitleEdge" VerticalAlignment="Top" Background="#01000000" ClipToBounds="True" MouseEnter="FullscreenEdge_Changed" MouseLeave="FullscreenEdge_Changed">
-       <Border x:Name="TitleSlide" Visibility="Hidden"><Border.RenderTransform><TranslateTransform/></Border.RenderTransform></Border>
+       <Border x:Name="TitleSlide" Visibility="Hidden" IsVisibleChanged="TitleSlide_IsVisibleChanged"><Border.RenderTransform><TranslateTransform/></Border.RenderTransform></Border>
       </Grid>
       <Grid x:Name="ControlsEdge" VerticalAlignment="Bottom" Background="#01000000" ClipToBounds="True" MouseEnter="FullscreenEdge_Changed" MouseLeave="FullscreenEdge_Changed">
        <Border x:Name="ControlsSlide" Visibility="Hidden" IsVisibleChanged="ControlsSlide_IsVisibleChanged" Background="#EC181F27"><Border.RenderTransform><TranslateTransform/></Border.RenderTransform></Border>
@@ -47,7 +60,7 @@
   <StackPanel x:Name="ControlBar" Grid.Row="2">
   <Grid Margin="17,9,17,0">
    <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="112"/></Grid.ColumnDefinitions>
-   <Slider x:Name="SeekBar" Minimum="0" Maximum="1" Value="0" IsEnabled="False" PreviewMouseLeftButtonDown="Seek_MouseDown" PreviewMouseMove="Seek_MouseMove" PreviewMouseLeftButtonUp="Seek_MouseUp" LostMouseCapture="Seek_LostCapture" AutomationProperties.Name="재생 위치"/>
+   <Slider x:Name="SeekBar" Foreground="{StaticResource PlaybackGradient}" Minimum="0" Maximum="1" Value="0" IsEnabled="False" PreviewMouseLeftButtonDown="Seek_MouseDown" PreviewMouseMove="Seek_MouseMove" PreviewMouseLeftButtonUp="Seek_MouseUp" LostMouseCapture="Seek_LostCapture" AutomationProperties.Name="재생 위치"/>
    <TextBlock x:Name="TimeText" Grid.Column="1" Text="00:00 / 00:00" FontSize="11" Foreground="#9CAAB9" VerticalAlignment="Center" Margin="15,0,12,0" FontFamily="Consolas"/>
    <Button x:Name="MuteButton" Grid.Column="2" Content="&#xE767;" FontFamily="Segoe MDL2 Assets" FontSize="16" Width="38" Padding="8" Click="Mute_Click" ToolTip="음소거 (M)" AutomationProperties.Name="음소거"/>
    <Slider x:Name="VolumeBar" Grid.Column="3" Minimum="0" Maximum="100" Value="75" IsMoveToPointEnabled="True" IsSnapToTickEnabled="True" TickFrequency="1" ValueChanged="Volume_Changed" AutomationProperties.Name="음량"/>

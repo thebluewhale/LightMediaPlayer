@@ -66,6 +66,15 @@ public partial class MainWindow
             await OpenPathAsync(_arguments[index + 2]);
             for (var attempt = 0; attempt < 100 && _player?.IsPlaying != true; attempt++) await Task.Delay(100);
             Check("resize_playback_started", _player?.IsPlaying == true);
+            for (var attempt = 0; attempt < 30 && !StartTitleBubble.IsVisible; attempt++) await Task.Delay(100);
+            var mediaTitle = Path.GetFileNameWithoutExtension(_arguments[index + 2]);
+            Check("window_title_and_start_overlay", MediaTitle.Text == mediaTitle && Title == mediaTitle + " — Light Media Player" &&
+                StartTitleBubble.IsVisible && StartTitle.Text == mediaTitle && StartDuration.Text == "(00:00:24)");
+            ShowOsd("47%");
+            await Task.Delay(2400);
+            Check("start_title_outlasts_volume_message", StartTitleBubble.IsVisible && !OsdBubble.IsVisible);
+            await Task.Delay(800);
+            Check("start_title_expires", !StartTitleBubble.IsVisible);
             Check("first_playback_attaches_video_host", _player?.Hwnd is nint output && output != 0 &&
                 ResizeProbeNative.IsChild(hwnd, output) && Window.GetWindow(VideoOverlay)?.Owner == this);
             WindowState = WindowState.Normal;
@@ -181,6 +190,9 @@ public partial class MainWindow
             Check("fullscreen_progress_updated_on_seek", FullscreenProgress.Value == target && FullscreenProgress.Maximum == _player!.Length);
             await Task.Delay(1500);
             var fill = (FrameworkElement)FullscreenProgress.Template.FindName("PART_Indicator", FullscreenProgress);
+            var track = (System.Windows.Controls.Primitives.Track)SeekBar.Template.FindName("PART_Track", SeekBar);
+            Check("shared_playback_gradient", track.DecreaseRepeatButton.Background is LinearGradientBrush { GradientStops.Count: 4 } gradient &&
+                fill is System.Windows.Controls.Border indicator && indicator.Background == gradient && VolumeBar.Foreground != gradient);
             var expectedWidth = FullscreenProgress.ActualWidth * FullscreenProgress.Value / FullscreenProgress.Maximum;
             Check("fullscreen_progress_persists_and_tracks_playback", FullscreenProgress.IsVisible && FullscreenProgress.Opacity == 0.75 &&
                 FullscreenProgress.Value > target && Math.Abs(fill.ActualWidth - expectedWidth) < 1);
